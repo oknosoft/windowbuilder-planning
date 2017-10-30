@@ -1,14 +1,19 @@
-# Created by .ignore support plugin (hsz.mobi)
-
 # Editor files
 .idea
 .vscode
 
+# OS files
+.DS_STORE
+
 # Exclude compiled files
-src/modifiers/
-localstorage/
+/lib
+/.eslintcache
+/tmp
+build
+coverage
+
+# Private config files
 /config/test.env
-/src/meta.json
 
 # npm files
 node_modules
