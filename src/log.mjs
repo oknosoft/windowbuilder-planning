@@ -7,7 +7,7 @@
  */
 
 import $p from './metadata/index.mjs';
-const auth = require('./auth');
+import auth from './auth';
 
 function getBody(req) {
   return new Promise((resolve, reject) => {
@@ -44,7 +44,7 @@ async function saveLog({_id, log, start, body}) {
   });
 }
 
-module.exports = async (ctx, next) => {
+export default async (ctx, next) => {
 
   // request
   const {moment} = $p.utils;

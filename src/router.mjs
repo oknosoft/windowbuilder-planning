@@ -1,13 +1,18 @@
 'use strict';
 
-const debug = require('debug')('wb:router');
+import logger from 'debug';
+const debug = logger('wb:router');
 debug('start');
 
-const Router = require('koa-better-router');
+import Router from 'koa-better-router';
+import get from './get';
+//import post from './post';
 const router = Router({prefix: '/plan'});
 
 router.loadMethods()
-  .get('/:where/:when', require('./get'));
-//.post('/:class/:ref', require('./post'));
+  .get('/:class/:ref', get);
+//.post('/:class/:ref', post);
+
+debugger;
 
 export default router;

@@ -6,29 +6,38 @@ import logger from 'debug';
 const debug = logger('wb:meta');
 
 // конструктор MetaEngine
-const MetaEngine = require('metadata-core')
-  .plugin(require('metadata-pouchdb'));
+import metaCore from 'metadata-core';
+import metaPouchdb from 'metadata-pouchdb';
+const MetaEngine = metaCore.plugin(metaPouchdb);
+
+// функция установки параметров сеанса
+import settings from '../../config/app.settings';
+
+// функция инициализации структуры метаданных
+import meta_init from './init';
+
 debug('required');
 
 // создаём контекст MetaEngine
 const $p = new MetaEngine();
 debug('created');
 
+// параметры сеанса инициализируем сразу
+$p.wsql.init(settings);
+
 
 // инициализируем параметры сеанса и метаданные
 (async () => {
 
-  // функция установки параметров сеанса
-  const config_init = require('../../config/app.settings');
-
-  // функция инициализации структуры метаданных
-  const meta_init = require('./init');
-
   // реквизиты подключения к couchdb
-  const {user_node} = config_init();
+  const {user_node} = settings();
 
-  // инициализируем метаданные
-  $p.wsql.init(config_init, meta_init);
+  // выполняем скрипт инициализации метаданных
+  meta_init($p);
+
+  // сообщяем адаптерам пути, суффиксы и префиксы
+  const {wsql, job_prm, adapters} = $p;
+  adapters.pouch.init(wsql, job_prm);
 
   // подключим модификаторы
   modifiers($p);
@@ -65,7 +74,7 @@ debug('created');
         // формируем новый
         pouch.load_changes({docs: [change.doc]});
       }).on('error', (err) => {
-        // handle errors
+        debug(`change error ${err}`);
       });
       debug(`loadind to ram: READY`);
     },

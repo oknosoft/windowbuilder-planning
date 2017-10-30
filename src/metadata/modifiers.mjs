@@ -10,10 +10,10 @@
 // import chartscharacteristics from './chartscharacteristics';
 //
 // // модификаторы отчетов
-import reports from './reports';
+import reports from './reports/index';
 
 // общие модули
-import common from './common';
+import common from './common/index';
 
 
 export default function ($p) {

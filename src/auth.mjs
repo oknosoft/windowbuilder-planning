@@ -1,7 +1,7 @@
 
-const request = require('request');
+import request from 'request';
 
-module.exports = async (ctx, {job_prm, cat}) => {
+export default async (ctx, {job_prm, cat}) => {
 
   // если указано ограничение по ip - проверяем
   const {restrict_ips} = ctx.app;
