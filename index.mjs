@@ -5,6 +5,10 @@
 import Koa from 'koa';
 const app = new Koa();
 
+// Register the cors as Koa middleware
+import cors from '@koa/cors';
+app.use(cors({credentials: true, maxAge: 600}));
+
 // Register the logger as Koa middleware
 import log from './src/log';
 app.use(log);

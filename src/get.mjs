@@ -6,6 +6,12 @@ import logger from 'debug';
 const debug = logger('wb:get');
 debug('required');
 
+/**
+ * Возвращает в body лог отдела за нужный день
+ * @param ctx
+ * @param next
+ * @return {Promise.<void>}
+ */
 async function log(ctx, next) {
   // данные авторизации получаем из контекста
   const {_auth, params} = ctx;
@@ -23,8 +29,10 @@ async function log(ctx, next) {
  */
 export async function reminder(ctx, next) {
 
-  // данные авторизации получаем из контекста
+  // параметры запроса получаем из контекста
   const [phase, date_from, date_till, ...keys] = ctx.params.ref.split(',');
+
+  // выполняем запрос к couchdb
   const res = await $p.adapters.pouch.remote.doc.query('server/planning', {
     reduce: true,
     group: true,
@@ -33,9 +41,12 @@ export async function reminder(ctx, next) {
     limit: 1000,
   });
 
+  // guid-ы ключей заменим data-объектами, а строки дат объектами moment()
   const {parameters_keys} = $p.cat;
   return res.rows
-    .filter((v) => !keys || !keys.length || keys.indexOf(v.key[2]) !== -1)
+    // фильтруем результат по положительному остатку и подходящему ключу
+    .filter((v) => v.value.total > 0 && (!keys || !keys.length || keys.indexOf(v.key[2]) !== -1))
+    // выпрямляем данные индекса в обычный объект
     .map(({key, value}) => ({
       date: moment(key[1]),
       key: parameters_keys.get(key[2]),
@@ -43,7 +54,12 @@ export async function reminder(ctx, next) {
     }));
 }
 
-
+/**
+ * Корневой обработчик get-запросов
+ * @param ctx
+ * @param next
+ * @return {Promise.<*>}
+ */
 export default async (ctx, next) => {
 
   try {

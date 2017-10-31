@@ -46,6 +46,10 @@ async function saveLog({_id, log, start, body}) {
 
 export default async (ctx, next) => {
 
+  if(ctx.method !== 'GET' && ctx.method !== 'POST'){
+    return next();
+  }
+
   // request
   const {moment} = $p.utils;
   const start = moment();
