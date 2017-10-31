@@ -6,7 +6,7 @@
  * Created by Evgeniy Malyarov on 23.09.2017.
  */
 
-import $p from './metadata/index.mjs';
+import $p from './metadata';
 import auth from './auth';
 
 function getBody(req) {

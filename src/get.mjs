@@ -1,10 +1,9 @@
 'use strict';
 
-import logger from 'debug';
-const debug = logger('wb:get');
-
 import $p from './metadata';
 
+import logger from 'debug';
+const debug = logger('wb:get');
 debug('required');
 
 async function log(ctx, next) {
@@ -15,24 +14,47 @@ async function log(ctx, next) {
     .catch((err) => ({error: true, message: `Объект ${_id} не найден\n${err.message}`}));
 }
 
-async function reminder(ctx, next) {
+/**
+ * Возвращает остаток и обороты регистра планирования
+ * /plan/reminder/План,20170801,20170802,305e3746-3aa9-11e6-bf30-82cf9717e145,cb5bc9bc-708a-11e7-ab3b-b09a52334246
+ * @param ctx
+ * @param next
+ * @return {Promise.<Array>}
+ */
+export async function reminder(ctx, next) {
 
   // данные авторизации получаем из контекста
-  const {_auth} = ctx;
+  const [phase, date_from, date_till, ...keys] = ctx.params.ref.split(',');
+  const res = await $p.adapters.pouch.remote.doc.query('server/planning', {
+    reduce: true,
+    group: true,
+    startkey: [phase, date_from],
+    endkey: [phase, date_till, '\ufff0'],
+    limit: 1000,
+  });
 
-
-  ctx.body = {reminder: 0};
+  const {parameters_keys} = $p.cat;
+  return res.rows
+    .filter((v) => !keys || !keys.length || keys.indexOf(v.key[2]) !== -1)
+    .map(({key, value}) => ({
+      date: moment(key[1]),
+      key: parameters_keys.get(key[2]),
+      ...value,
+    }));
 }
 
 
 export default async (ctx, next) => {
 
-  try{
-    switch (ctx.params.class){
+  try {
+    switch (ctx.params.class) {
     case 'log':
       return await log(ctx, next);
     case 'reminder':
-      return await reminder(ctx, next);
+      const rem = await reminder(ctx, next);
+      rem.forEach((v) => v.key = {ref: v.key.ref, name: v.key.name});
+      ctx.body = rem;
+      return;
     default:
       ctx.status = 404;
       ctx.body = {
@@ -41,7 +63,7 @@ export default async (ctx, next) => {
       };
     }
   }
-  catch(err){
+  catch (err) {
     ctx.status = 500;
     ctx.body = {
       error: true,

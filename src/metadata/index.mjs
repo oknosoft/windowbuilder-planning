@@ -1,6 +1,6 @@
 
 // модификаторы data-объектов
-import modifiers from './modifiers.mjs';
+import modifiers from './modifiers';
 
 import logger from 'debug';
 const debug = logger('wb:meta');
