@@ -40,7 +40,7 @@ async function calc_order(ctx, next) {
     // получим остатки регистра
     const start = moment(calc_order.date);
     const stop = start.clone().add(10, 'days');
-    const rem = await reminder({params: {ref: `План,${start.format('YYYYMMDD')},${stop.format('YYYYMMDD')}`}});
+    const rem = await reminder({params: {ref: `plan,${start.format('YYYYMMDD')},${stop.format('YYYYMMDD')}`}});
 
     // освобождаем память
     calc_order && calc_order.unload();

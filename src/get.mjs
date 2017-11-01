@@ -22,7 +22,7 @@ async function log(ctx, next) {
 
 /**
  * Возвращает остаток и обороты регистра планирования
- * /plan/reminder/План,20170801,20170802,305e3746-3aa9-11e6-bf30-82cf9717e145,cb5bc9bc-708a-11e7-ab3b-b09a52334246
+ * /plan/reminder/plan,20170801,20170802,305e3746-3aa9-11e6-bf30-82cf9717e145,cb5bc9bc-708a-11e7-ab3b-b09a52334246
  * @param ctx
  * @param next
  * @return {Promise.<Array>}
