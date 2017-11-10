@@ -13,6 +13,5 @@ router.loadMethods()
   .get('/:class/:ref', get)
   .post('/:class/:ref', post);
 
-debugger;
 
 export default router;
