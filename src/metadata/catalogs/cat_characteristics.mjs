@@ -15,11 +15,19 @@ export default function ($p) {
     prop_for_plan: {
       get: function () {
         //Фурнитура
-        const furns = $p.wsql.alasql("select first(furn) from ? where furn <> ?", [this.constructions._obj, $p.utils.blank.guid]);
+        const furns = $p.wsql.alasql("select first(furn) as furn from ? where furn <> ?", [this.constructions._obj, $p.utils.blank.guid]);
+
+        //признаки нестандартов
+        const non_standard = $p.wsql.alasql("select sum(crooked) as crooked, sum(colored) as colored, sum(lay) as lay, sum(made_to_order) as made_to_order, sum(packing) as packing from ?", [this.specification.unload_column("nom")])
 
         return {
           sys: this.sys,
-          furn: (furns.length == 0 ? $p.utils.blank : $p.cat.furns.get(furns[0]["FIRST(furn)"]))
+          furn: (furns.length == 0 ? $p.utils.blank : $p.cat.furns.get(furns[0].furn)),
+          crooked: non_standard[0].crooked > 0,
+          colored: non_standard[0].colored > 0,
+          lay: non_standard[0].lay > 0,
+          made_to_order: non_standard[0].made_to_order > 0,
+          packing: non_standard[0].packing > 0
         }
       }
     }
