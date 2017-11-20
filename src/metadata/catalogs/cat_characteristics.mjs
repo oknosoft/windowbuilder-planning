@@ -18,7 +18,7 @@ export default function ($p) {
         const furns = $p.wsql.alasql("select first(furn) as furn from ? where furn <> ?", [this.constructions._obj, $p.utils.blank.guid]);
 
         //признаки нестандартов
-        const non_standard = $p.wsql.alasql("select sum(crooked) as crooked, sum(colored) as colored, sum(lay) as lay, sum(made_to_order) as made_to_order, sum(packing) as packing from ?", [this.specification.unload_column("nom")])
+        const non_standard = $p.wsql.alasql("select sum(crooked) as crooked, sum(colored) as colored, sum(lay) as lay, sum(made_to_order) as made_to_order, sum(packing) as packing from ?", [this.specification.unload_column("nom")]);
 
         return {
           sys: this.sys,
