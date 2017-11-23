@@ -7,7 +7,7 @@
  */
 
 export default function ($p) {
-  $p.cat.nonstandard_attributes._meta.cachable = "doc_ram";
+  $p.cat.nonstandard_attributes.metadata().cachable = "doc_ram";
 
   //Фукнция определения признака нестандарта по параметрам
   $p.cat.nonstandard_attributes.__define({

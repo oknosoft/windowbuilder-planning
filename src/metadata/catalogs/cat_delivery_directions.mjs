@@ -8,6 +8,6 @@
 
 export default function ($p) {
 
-  $p.cat.delivery_directions._meta.cachable = "doc_ram";
+  $p.cat.delivery_directions.metadata().cachable = "doc_ram";
 
 }
