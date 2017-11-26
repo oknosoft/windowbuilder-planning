@@ -13,10 +13,14 @@ export default function ($p) {
   $p.cat.nonstandard_attributes.__define({
     key_by_params: {
       value: function (params) {
-        const res = $p.wsql.alasql("select ref from cat_nonstandard_attributes where (crooked=? and colored=? and lay=? and made_to_order=? and packing=?)"
-          , [params.crooked||false, params.colored||false, params.lay||false, params.made_to_order||false, params.packing||false]);
+        const res = $p.cat.nonstandard_attributes.find_rows({
+          "crooked":params.crooked||false,
+          "colored":params.colored||false,
+          "lay":params.lay||false,
+          "made_to_order":params.made_to_order||false,
+          "packing":params.packing||false});
 
-        return (res.length == 0 ? undefined : res[0].ref);
+        return (res.length == 0 ? undefined : res[0]);
       }
       }
   })
