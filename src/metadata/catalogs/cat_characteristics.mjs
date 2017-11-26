@@ -12,7 +12,7 @@ export default function ($p) {
   $p.CatCharacteristics.prototype.__define({
     //содержит свойства, необходимые для работы микросервиса планирования
     //перечень свойств можно расширить, добавив недостающие в возвращаемый объект
-    prop_for_plan: {
+    props_for_plan: {
       get: function () {
         //Фурнитура
         const furns = $p.wsql.alasql("select first(furn) as furn from ? where furn <> ?", [this.constructions._obj, $p.utils.blank.guid]);
