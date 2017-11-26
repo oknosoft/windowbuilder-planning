@@ -14,7 +14,6 @@ export default function ($p) {
     keys_by_params: {
       value: function (params) {
         //Получаем все ключи, фильтрованные по применению (если оно указано) и отсеиваем группы
-        const all_keys = $p.cat.parameters_keys.find_rows(Object.assign({"is_folder":false}, "applying" in params ? {"applying": params.applying} : {}));
         const p_params = {};
         const enum_comp = $p.enm.comparison_types;
         const {properties} = $p.job_prm.properties;
@@ -29,8 +28,7 @@ export default function ($p) {
         }
 
         const res = [];
-
-        all_keys.forEach((key)=>{
+        const all_keys = $p.cat.parameters_keys.find_rows(Object.assign({"is_folder":false}, "applying" in params ? {"applying": params.applying} : {}), (key)=>{
           let good = true;
 
           //Берем строки табличной части ключа с отбором по свойствам, по которым у нас запрошены ключи
@@ -43,7 +41,7 @@ export default function ($p) {
 
           //Если передан параметр first, то нужен только первый ключ, поэтому сразу возвращаем
           if(params.first){
-            return res;
+            return key;
           }
         }
       })
