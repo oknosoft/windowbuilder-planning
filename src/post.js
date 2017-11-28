@@ -2,10 +2,9 @@
 
 import $p from './metadata';
 
-import {reminder} from './get'
+import {reminder} from './get';
 
-import logger from 'debug';
-const debug = logger('wb:post');
+const debug = require('debug')('wb:post');
 debug('required');
 
 
@@ -23,7 +22,7 @@ async function calc_order(ctx, next) {
   const {contracts, nom, inserts, clrs} = cat;
 
   try {
-    if(!utils.is_guid(res.ref)){
+    if(!utils.is_guid(res.ref)) {
       ctx.status = 404;
       ctx.body = `Параметр запроса ref=${res.ref} не соответствует маске уникального идентификатора`;
       return;
@@ -33,7 +32,7 @@ async function calc_order(ctx, next) {
     const {characteristics} = _query;
     delete _query.characteristics;
     const calc_order = doc.calc_order.create(_query, false, true);
-    for(const ref in characteristics){
+    for (const ref in characteristics) {
       cat.characteristics.create(characteristics[ref], false, true);
     }
 
@@ -44,7 +43,7 @@ async function calc_order(ctx, next) {
 
     // освобождаем память
     calc_order && calc_order.unload();
-    for(const ref in characteristics){
+    for (const ref in characteristics) {
       cat.characteristics.by_ref[ref] && cat.characteristics.by_ref[ref].unload();
     }
 

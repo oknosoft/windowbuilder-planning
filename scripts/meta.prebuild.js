@@ -196,7 +196,13 @@ function obj_constructor_text(_m, category, name, categoties) {
     f, props = '';
 
   const filename = dir && path.resolve(__dirname, `../src/metadata/${dir}/${category}_${name}.js`);
-  const extModule = dir && fs.existsSync(filename) && require(filename);
+  let extModule;
+  try{
+    extModule = dir && fs.existsSync(filename) && require(filename);
+  }
+  catch(err){
+  }
+
 
   const extender = extModule && extModule.extender && extModule.extender.toString();
   const extText = extender && extender.substring(extender.indexOf('{') + 1, extender.lastIndexOf('}') - 1);

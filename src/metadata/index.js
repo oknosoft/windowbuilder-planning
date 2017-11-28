@@ -2,8 +2,7 @@
 // модификаторы data-объектов
 import modifiers from './modifiers';
 
-import logger from 'debug';
-const debug = logger('wb:meta');
+const debug = require('debug')('wb:meta');
 
 // конструктор MetaEngine
 import metaCore from 'metadata-core';
@@ -77,6 +76,8 @@ $p.wsql.init(settings);
         debug(`change error ${err}`);
       });
       debug(`loadind to ram: READY`);
+      // обычно, это событие генерирует модуль pricing после загрузки цен, но в данном сервисе цены не нужны
+      pouch.emit('pouch_complete_loaded');
     },
   });
 
