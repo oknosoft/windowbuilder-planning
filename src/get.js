@@ -2,8 +2,7 @@
 
 import $p from './metadata';
 
-import logger from 'debug';
-const debug = logger('wb:get');
+const debug = require('debug')('wb:get');
 debug('required');
 
 /**
@@ -43,8 +42,9 @@ export async function reminder(ctx, next) {
 
   // guid-ы ключей заменим data-объектами, а строки дат объектами moment()
   const {parameters_keys} = $p.cat;
+
   return res.rows
-    // фильтруем результат по положительному остатку и подходящему ключу
+  // фильтруем результат по положительному остатку и подходящему ключу
     .filter((v) => v.value.total > 0 && (!keys || !keys.length || keys.indexOf(v.key[2]) !== -1))
     // выпрямляем данные индекса в обычный объект
     .map(({key, value}) => ({

@@ -1,7 +1,6 @@
 'use strict';
 
-import logger from 'debug';
-const debug = logger('wb:router');
+const debug = require('debug')('wb:router');
 debug('start');
 
 import Router from 'koa-better-router';

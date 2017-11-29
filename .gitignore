@@ -6,11 +6,10 @@
 .DS_STORE
 
 # Exclude compiled files
-/lib
 /.eslintcache
 /tmp
-build
-coverage
+/index.js.map
+/index.js
 
 # Private config files
 /config/test.env
