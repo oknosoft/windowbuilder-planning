@@ -16,7 +16,7 @@ export default function ($p) {
         //Получаем все ключи, фильтрованные по применению (если оно указано) и отсеиваем группы
         const p_params = {};
         const enum_comp = $p.enm.comparison_types;
-        const {properties} = $p.job_prm.properties;
+        const {properties} = $p.job_prm;
 
 
         //Каждый переданный параметр ищем в job_prm.properties (в нем есть все свойства с синонимами, только по ним делаем поиск)
