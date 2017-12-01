@@ -17,8 +17,10 @@ export default function ($p) {
         //Фурнитура
         const furns = $p.wsql.alasql("select first(furn) as furn from ? where furn <> ?", [this.constructions._obj, $p.utils.blank.guid]);
 
+        const nom = this.specification.unload_column("nom");
         //признаки нестандартов
-        const non_standard = $p.wsql.alasql("select sum(crooked) as crooked, sum(colored) as colored, sum(lay) as lay, sum(made_to_order) as made_to_order, sum(packing) as packing from ?", [this.specification.unload_column("nom")]);
+        const non_standard = $p.wsql.alasql("select sum(crooked) as crooked, sum(colored) as colored, sum(lay) as lay, sum(made_to_order) as made_to_order, sum(packing) as packing from ?", [nom]);
+        const days_to_execution = $p.wsql.alasql("select min(days_to_execution) as days_to_execution from ?", [nom]);
 
         return {
           sys: this.sys,
@@ -27,7 +29,8 @@ export default function ($p) {
           colored: non_standard[0].colored > 0,
           lay: non_standard[0].lay > 0,
           made_to_order: non_standard[0].made_to_order > 0,
-          packing: non_standard[0].packing > 0
+          packing: non_standard[0].packing > 0,
+          days_to_execution: days_to_execution[0].days_to_execution
         }
       }
     }
