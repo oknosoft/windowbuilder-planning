@@ -28,10 +28,10 @@ export default function ($p) {
           days_to_execution: 0
         };
 
-        const specification = this.specification._obj;
+        const {specification} = this;
 
-        specification.reduce((res, row)=>{
-          const nom = $p.cat.nom.get(row.nom);
+        specification.forEach((row)=>{
+          const nom = row.nom;
 
           res.crooked = res.crooked || !!nom.crooked;
           res.colored = res.colored || !!nom.colored;
@@ -40,9 +40,7 @@ export default function ($p) {
           res.packing = res.packing || !!nom.packing;
 
           res.days_to_execution = Math.max(res.days_to_execution, nom.days_to_execution);
-
-          return res;
-        }, res)
+        })
 
         return res;
       }
