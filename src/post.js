@@ -35,7 +35,6 @@ async function calc_order(ctx, next) {
 
     //Ключи доставки
     const all_keys = new Set();
-    const keys_delivery = new Set();
     const {cache_by_elements} = cat.delivery_directions;
 
     //Ключи доставки нужны по подразделению и району доставки
@@ -50,14 +49,12 @@ async function calc_order(ctx, next) {
 
           parameters_keys.forEach((param_key) => {
             all_keys.add(param_key.ref);
-            keys_delivery.add(param_key.ref);
           })
       })
       }
     })
 
     let days_to_execution = 0;
-    //const keys_
 
     for (const ref in characteristics) {
       const characteristic = cat.characteristics.create(characteristics[ref], false, true);
