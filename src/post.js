@@ -34,7 +34,7 @@ async function calc_order(ctx, next) {
     const calc_order = doc.calc_order.create(_query, false, true);
 
     //Ключи доставки
-    const keys_delivery = [];
+    const all_keys = new Set();
     const {cache_by_elements} = cat.delivery_directions;
 
     //Ключи доставки нужны по подразделению и району доставки
@@ -48,10 +48,7 @@ async function calc_order(ctx, next) {
           });
 
           parameters_keys.forEach((param_key) => {
-            const ref = param_key.ref;
-            if (keys_delivery.indexOf(ref) == -1) {
-              keys_delivery.push(ref);
-            }
+            all_keys.add(param_key.ref);
           })
       })
       }
@@ -63,36 +60,124 @@ async function calc_order(ctx, next) {
       const characteristic = cat.characteristics.create(characteristics[ref], false, true);
       const {props_for_plan} = characteristic;
 
-      days_to_execution = Math.max(days_to_execution, props_for_plan.days_to_execution);
+      const parameters_keys = cat.parameters_keys.keys_by_params(
+        Object.assign({applying: 'РабочийЦентр'}, props_for_plan));
+
+      const need_numbers = new Set();
+
+      parameters_keys.forEach((param_key)=>{
+        all_keys.add(param_key.ref);
+        need_numbers.add(param_key.sorting_field);
+      });
+
+      //Прицепляем к характеристике ключи, которые подходят/нужны для ее производства
+      Object.assign(characteristics[ref], {parameters_keys : parameters_keys.slice(), need_numbers:need_numbers});
+
+      days_to_execution = (days_to_execution > props_for_plan.days_to_execution ? days_to_execution : props_for_plan.days_to_execution);
     }
 
-    const cur_day = moment().startOf('day');
+    const cur_day = moment().startOf('day').add(1, 'days');
     const start = (cur_day > moment(calc_order.date) ? cur_day : moment(calc_order.date)).add(days_to_execution, 'days');
     const stop = start.clone().add(20, 'days');
 
-    // получим остатки регистра
-    const rem = await reminder({params: {ref: `plan,${start.format('YYYYMMDD')},${stop.format('YYYYMMDD')},${keys_delivery.join(',')}`}});
-
-    const res_plan = [];
+    // получим остатки регистра по всем ключам сразу, чтобы два раза не бегать на сервер
+    const rem = await reminder({params: {ref: `plan,${start.format('YYYYMMDD')},${stop.format('YYYYMMDD')},${Array.from(all_keys).join(',')}`}});
 
     //Посчитаем общую требуемую мощность доставки,
-    //чтобы сократить число циклов планирования, если по ключу доставки явно не хватает мощности
+    //чтобы сразу отобрать те ключи доставки, которые могут обеспечить нужное количество
     //пока считаем по количеству
     const needed_performance = calc_order.production.aggregate('','quantity');
 
-    let ready = false;
+    //Остатки неплохо бы отсортировать и разделить на две части - доставку и производство
+    const rem_delivery = $p.wsql.alasql('select * FROM ? WHERE key->applying = ? AND total >= ? ORDER BY date, key->priority DESC, total DESC', [rem, $p.enm.parameters_keys_applying['НаправлениеДоставки'], needed_performance]);
+    const rem_main = $p.wsql.alasql('select *, key->sorting_field AS number FROM ? WHERE key->applying = ? ORDER BY key->sorting_field DESC, date DESC, key->priority DESC', [rem, $p.enm.parameters_keys_applying['РабочийЦентр']]);
 
-    rem.forEach((rem_str) => {
-        if (rem_str.total >= needed_performance && !ready) {
+    const res_plan = [];
 
-          calc_order.production.forEach((row) => {
-            res_plan.push({date:rem_str.date, key: rem_str.key.ref, elm:0, obj:row.characteristic.ref, performance:row.quantity, phase:'plan', specimen:0});
+    let ok = (rem_delivery.length > 0);
+    let i = 0;
+    const length_delivery = rem_delivery.length;
+
+    if (ok) {
+      do {
+        const row_delivery = rem_delivery[i];
+        i++;
+
+        //колонку остатков будем хранить отдельно
+        const totals = new Map();
+
+        //Обрежем массив мощностей ключей по дате, чтобы не бегать по всей таблице
+        const rem_main_cur = rem_main.filter(row => {
+          return row.date <= row_delivery.date;
+        });
+
+        rem_main_cur.forEach((row)=>{
+          totals.set(row, row.total);
+        })
+
+        res_plan.length = 0;
+        ok = true;
+
+        calc_order.production.forEach((row_order) => {
+          let date = row_delivery.date;
+          //В этом set будем хранить запланированные номера операций
+          const planned_numbers = new Set();
+
+          const characteristic = characteristics[row_order.characteristic.ref];
+
+          rem_main_cur.forEach((row_main) => {
+            if (totals.get(row_main) >= row_order.quantity && !planned_numbers.has(row_main.number) && row_main.date <= date && characteristic.parameters_keys.indexOf(row_main.key) > -1) {
+              res_plan.push({
+                date: row_main.date,
+                key: row_main.key.ref,
+                elm: 0,
+                obj: characteristic.ref,
+                performance: row_order.quantity,
+                phase: 'plan',
+                specimen: 0
+              })
+
+              planned_numbers.add(row_main.number);
+              totals.set(row_main, totals.get(row_main) - row_order.quantity);
+              date = row_main.date;
+            }
           })
 
-          ready = true;
+          //результат считаем успешным, если удалось запланировать все номера операций, требуемые данной характеристике
+          if (planned_numbers.size != characteristic.need_numbers.size) {
+            ok = false;
+          }
+        })
+        //Если все получилось, то добавляем строку с ключом доставки
+        if (ok) {
+          res_plan.push({
+            date: row_delivery.date,
+            key: row_delivery.key.ref,
+            elm: 0,
+            performance: needed_performance,
+            phase: 'plan',
+            specimen: 0
+          });
         }
-      }
-    )
+        else {
+          res_plan.length = 0;
+        }
+      } while (ok == false && i < length_delivery)
+    }
+
+    //Если ничего не удалось запланировать по производству, добавим доставку - первую строку, самую близкую по дате
+    if (!res_plan.length && rem_delivery.length){
+      const row_delivery = rem_delivery[0];
+
+      res_plan.push({
+        date: row_delivery.date,
+        key: row_delivery.key.ref,
+        elm: 0,
+        performance: needed_performance,
+        phase: 'plan',
+        specimen: 0
+      });
+    }
 
     // освобождаем память
     calc_order && calc_order.unload();
@@ -101,7 +186,7 @@ async function calc_order(ctx, next) {
     }
 
     // возвращаем результат
-    ctx.body = {ok: true, rows: res_plan};
+    ctx.body = {ok: ok, rows: res_plan};
 
 
   }
