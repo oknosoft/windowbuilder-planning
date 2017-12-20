@@ -71,7 +71,7 @@ async function calc_order(ctx, next) {
       });
 
       //Прицепляем к характеристике ключи, которые подходят/нужны для ее производства
-      Object.assign(characteristics[ref], {parameters_keys : parameters_keys.slice(), need_numbers:need_numbers});
+      Object.assign(characteristic, {parameters_keys : parameters_keys.slice(), need_numbers:need_numbers});
 
       days_to_execution = (days_to_execution > props_for_plan.days_to_execution ? days_to_execution : props_for_plan.days_to_execution);
     }
@@ -123,7 +123,7 @@ async function calc_order(ctx, next) {
           //В этом set будем хранить запланированные номера операций
           const planned_numbers = new Set();
 
-          const characteristic = characteristics[row_order.characteristic.ref];
+          const {characteristic} = row_order;
 
           rem_main_cur.forEach((row_main) => {
             if (totals.get(row_main) >= row_order.quantity && !planned_numbers.has(row_main.number) && row_main.date <= date && characteristic.parameters_keys.indexOf(row_main.key) > -1) {
