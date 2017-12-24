@@ -23,7 +23,7 @@ export default function ($p) {
         for (const param in params) {
           if (param in $p.job_prm.properties) {
             //запоминаем свойство, его ref (чтобы работал поиск по табличной части) и значение параметра
-            p_params[properties[param]] = {obj:properties[param], value:params[param]};
+            p_params[properties[param]] = {obj: properties[param], value: params[param]};
           }
         }
 
