@@ -15,8 +15,7 @@ module.exports = function settings(prm) {
     guests: [],
 
     // расположение couchdb
-    couch_path: process.env.COUCHPATH || "http://cou221:5984/wb_",
-    //couch_path: "https://light.oknosoft.ru/couchdb/wb_" || "http://cou200:5984/wb_",
+    couch_path: process.env.COUCHPATH || process.env.COUCHLOCAL || "http://cou221:5984/wb_",
 
     // расположение couchdb для nodejs
     couch_local: process.env.COUCHLOCAL || "http://cou221:5984/wb_",

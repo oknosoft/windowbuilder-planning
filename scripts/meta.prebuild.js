@@ -6,11 +6,15 @@
 
 'use strict';
 
+if(!process.env.DEBUG) {
+  process.env.DEBUG = 'prebuild:,-not_this';
+}
+if(!process.env.COUCHLOCAL) {
+  process.env.COUCHLOCAL = 'http://cou221:5984/wb_';
+}
+
 const fs = require('fs');
 const path = require('path');
-
-process.env.DEBUG = 'prebuild:,-not_this';
-process.env.COUCHLOCAL = 'http://cou221:5984/wb_';
 const debug = require('debug')('prebuild:');
 
 debug('Читаем конструктор и плагины');
