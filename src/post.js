@@ -198,6 +198,12 @@ async function calc_order(ctx, next) {
 
 }
 
+//Запускает загрузку данных из doc
+async function load_doc_ram(ctx, next) {
+  $p.adapters.pouch.load_doc_ram();
+  ctx.body = {'doc_ram_loading_started': true};
+}
+
 /**
  * Корневой обработчик post-запросов
  * @param ctx
@@ -210,6 +216,8 @@ export default async (ctx, next) => {
     switch (ctx.params.class) {
       case 'doc.calc_order':
         return await calc_order(ctx, next);
+      case 'load_doc_ram':
+        return load_doc_ram(ctx, next);
       default:
         ctx.status = 404;
         ctx.body = {
