@@ -199,7 +199,7 @@ async function calc_order(ctx, next) {
 }
 
 //Запускает загрузку данных из doc
-async function load_doc_ram(ctx, next) {
+function load_doc_ram(ctx, next) {
   $p.adapters.pouch.load_doc_ram();
   ctx.body = {'doc_ram_loading_started': true};
 }
