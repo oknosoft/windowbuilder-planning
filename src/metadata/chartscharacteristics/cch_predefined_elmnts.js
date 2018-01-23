@@ -15,7 +15,7 @@ export default function ($p) {
   adapters.pouch.once('pouch_doc_ram_loaded', () => {
 
     // читаем элементы из pouchdb и создаём свойства
-    cch.predefined_elmnts.pouch_find_rows({_raw: true, _top: 500, _skip: 0})
+    cch.predefined_elmnts.find_rows_remote({_raw: true, _top: 500, _skip: 0})
       .then((rows) => {
 
         const parents = {};
