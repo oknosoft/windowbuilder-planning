@@ -1,7 +1,7 @@
 /**
  * ### Дополнительные методы справочника Направления доставки
  *
- * &copy; Evgeniy Malyarov http://www.oknosoft.ru 2014-2017
+ * &copy; Evgeniy Malyarov http://www.oknosoft.ru 2014-2018
  *
  * @module cat_delivery_directions
  */
