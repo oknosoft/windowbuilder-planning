@@ -1,7 +1,7 @@
 {
   "name": "windowbuilder-planning",
   "description": "Planning engime for windowbuilder project",
-  "version": "2.0.236",
+  "version": "2.0.237",
   "author": "Evgeniy Malyarov <info@oknosoft.ru> (http://www.oknosoft.ru)",
   "license": "SEE LICENSE IN LICENSE.en.md",
   "main": "index.js",
@@ -10,7 +10,8 @@
     "npm": "^5.5"
   },
   "scripts": {
-    "start": "node --inspect ./index",
+    "start": "node ./index",
+    "debug": "node --inspect ./index",
     "build": "node ./scripts/build",
     "meta:prebuild": "node ./scripts/meta.prebuild",
     "meta:link": "node ./scripts/meta.link"
@@ -20,20 +21,20 @@
     "koa": "^2.4.1",
     "koa-better-router": "^2.1",
     "md5-file": "^3.2.3",
-    "metadata-abstract-ui": "^2.0.16-beta.44",
-    "metadata-core": "^2.0.16-beta.44",
-    "metadata-pouchdb": "^2.0.16-beta.44",
+    "metadata-abstract-ui": "^2.0.16-beta.47",
+    "metadata-core": "^2.0.16-beta.47",
+    "metadata-pouchdb": "^2.0.16-beta.47",
     "request": "^2.83.0"
   },
   "devDependencies": {
     "babel-core": "^6.26.0",
-    "babel-eslint": "^8.1.2",
+    "babel-eslint": "^8.2.1",
     "babel-loader": "^7.1.2",
     "babel-plugin-syntax-object-rest-spread": "^6.13.0",
     "babel-plugin-transform-class-properties": "^6.24.1",
     "babel-preset-node8": "^1.2.0",
-    "eslint": "^4.14.0",
-    "eslint-config-react-app": "^2.0.1",
+    "eslint": "^4.16.0",
+    "eslint-config-react-app": "^2.1.0",
     "eslint-plugin-promise": "^3.6.0",
     "eslint-plugin-react": "^7.5.1",
     "webpack": "^3.10.0",
