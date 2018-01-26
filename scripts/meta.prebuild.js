@@ -6,15 +6,10 @@
 
 'use strict';
 
-if(!process.env.DEBUG) {
-  process.env.DEBUG = 'prebuild:,-not_this';
-}
-if(!process.env.COUCHLOCAL) {
-  process.env.COUCHLOCAL = 'http://cou221:5984/wb_';
-}
-
 const fs = require('fs');
 const path = require('path');
+
+process.env.DEBUG = 'prebuild:,-not_this';
 const debug = require('debug')('prebuild:');
 
 debug('Читаем конструктор и плагины');
@@ -55,9 +50,7 @@ $p.wsql.init((prm) => {
 
 }, ($p) => {
 
-  const db = new MetaEngine.classes.PouchDB(config.couch_local + 'meta', {
-    skip_setup: true,
-  });
+  const db = new MetaEngine.classes.PouchDB(config.couch_local + 'meta', {skip_setup: true});
 
   let _m;
 
@@ -204,17 +197,18 @@ function obj_constructor_text(_m, category, name, categoties) {
   try{
     extModule = dir && fs.existsSync(filename) && require(filename);
   }
-  catch(err){
+  catch(err) {
+    extModule = {};
   }
 
-
-  const extender = extModule && extModule.extender && extModule.extender.toString();
+  const extender = extModule && extModule[fn_name] && extModule[fn_name].toString();
   const extText = extender && extender.substring(extender.indexOf('{') + 1, extender.lastIndexOf('}') - 1);
 
   const substitute = extModule && extModule.substitute && extModule.substitute.toString();
   const substituteText = substitute && substitute.substring(substitute.indexOf('{') + 3, substitute.lastIndexOf('}'));
 
-  const managerText = extModule && extModule.manager && extModule.manager.toString();
+  const managerName = `${fn_name}Manager`;
+  const managerText = extModule && extModule[managerName] && extModule[managerName].toString();
 
 
   text += '\n* ' + (meta.illustration || meta.synonym);
@@ -246,7 +240,7 @@ function obj_constructor_text(_m, category, name, categoties) {
     text += `get ${ts}(){return this._getter_ts('${ts}')}\nset ${ts}(v){this._setter_ts('${ts}',v)}\n`;
   }
 
-  // если описан расширитель, дополняем
+  // если описан расширитель объекта, дополняем
   if(extText){
     text += extText;
   }
@@ -273,9 +267,10 @@ function obj_constructor_text(_m, category, name, categoties) {
 
   }
 
+  // если описан расширитель менеджера, дополняем
   if(managerText){
-    text += managerText;
-    text += `\n$p.${category}.create('${name}', ${extModule.manager.name}, true);\n`;
+    text += managerText.replace('extends Object', 'extends CatManager');
+    text += `\n$p.${category}.create('${name}', ${managerName}, ${extModule[managerName]._freeze ? 'true' : 'false'});\n`;
   }
   else{
     text += `$p.${category}.create('${name}');\n`;

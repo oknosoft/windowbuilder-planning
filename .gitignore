@@ -8,8 +8,7 @@
 # Exclude compiled files
 /.eslintcache
 /tmp
-/index.js.map
-/index.js
+*.map
 
 # Private config files
 /config/test.env
