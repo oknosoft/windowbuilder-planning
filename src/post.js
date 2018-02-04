@@ -127,11 +127,21 @@ async function calc_order(ctx, next) {
 
           rem_main_cur.forEach((row_main) => {
             if (totals.get(row_main) >= row_order.quantity && !planned_numbers.has(row_main.number) && row_main.date <= date && characteristic.parameters_keys.indexOf(row_main.key) > -1) {
+              //Строка-приход
               res_plan.push({
                 date: row_main.date,
                 key: row_main.key.ref,
                 elm: 0,
                 obj: characteristic.ref,
+                performance: row_order.quantity,
+                phase: 'run',
+                specimen: 0
+              });
+              //Строка-расход
+              res_plan.push({
+                date: row_main.date,
+                key: row_main.key.ref,
+                elm: 0,
                 performance: row_order.quantity,
                 phase: 'plan',
                 specimen: 0
@@ -204,6 +214,91 @@ function load_doc_ram(ctx, next) {
   ctx.body = {'doc_ram_loading_started': true};
 }
 
+//Создает/обновляет задания на производство (наряды на РЦ)
+async function create_work_centers_tasks(ctx, next){
+  const {_query, route} = ctx;
+
+  if(!_query.date_from || !_query.date_till){
+    ctx.status = 403;
+    ctx.error = true;
+    ctx.body = `Не указаны даты начала и/или окончания`;
+    return;
+  }
+
+  const cur_day = moment().startOf('day');
+
+  const date_from = (moment(_query.date_from) < cur_day) ? cur_day : moment(_query.date_from);
+  const date_till = moment(_query.date_till);
+
+  if(date_till < cur_day){
+    ctx.status = 403;
+    ctx.error = true;
+    ctx.body = `Дата окончания меньше текущей`;
+    return;
+  }
+
+  const rem = await reminder({params: {ref: `run,${date_from.format('YYYYMMDD')},${date_till.format('YYYYMMDD')}`}}, false, true);
+
+  if(rem.length) {
+    const docs = new Map();
+    const arrDocs = [];
+
+    rem.forEach((elm) => {
+      const {date, key} = elm;
+      const realDate = date.toString();
+
+      if (!docs.has(realDate)) {
+        docs.set(realDate, new Map());
+      }
+      const mapDate = docs.get(realDate);
+      const hasDoc = mapDate.has(key);
+
+      const doc = (hasDoc) ? mapDate.get(key) : $p.doc.work_centers_task.create({date, key}, false, true);
+
+      if (!hasDoc) {
+        arrDocs.push(doc);
+        mapDate.set(key, doc);
+      }
+      doc.planning.add(Object.assign({performance: elm.total}, elm.allkey));
+    })
+
+    const res = await save_array(arrDocs, true);
+    ctx.body = Object.assign(res,
+      {message: (res.err) ? 'Произошла ошибка при записи. Записано ' + res.count + ' заданий из ' + arrDocs.length : 'Записано ' + res.count + ' заданий'});
+  }
+  else {
+    ctx.body = {count: 0, message:'Нет плановых данных для формирований заданий'};
+  }
+}
+
+async function save_array(arrDocs, post, operational) {
+  const count = arrDocs.length;
+
+  return new Promise((resolve, reject) => {
+    //Выстраиваем цепочку promise для последовательной записи
+    arrDocs.reduce(function (doc_promise, doc, index) {
+      return doc_promise.then(function () {
+        //проверяем наличие вложений индивидуально для каждого объекта массива
+        const attachments = ('attachments' in doc) ? doc.attachments : undefined;
+
+        if (index == count - 1) {
+          //В последний promise вставляем разрешение головного promise функции
+          return doc.save(post, operational, attachments).then(() => {
+            resolve({err: false, count})
+          });
+        }
+        else {
+          return doc.save(post, operational, attachments);
+        }
+      })
+        .catch((result) => {
+          reject({err: true, 'count': index, result:result});
+        })
+        //последний аргумент - начальное значение, т.е. первый promise, под которым пойдут остальные
+        }, Promise.resolve());
+  })
+}
+
 /**
  * Корневой обработчик post-запросов
  * @param ctx
@@ -218,6 +313,8 @@ export default async (ctx, next) => {
         return await calc_order(ctx, next);
       case 'load_doc_ram':
         return load_doc_ram(ctx, next);
+      case 'create_work_centers_tasks':
+        return await create_work_centers_tasks(ctx, next);
       default:
         ctx.status = 404;
         ctx.body = {

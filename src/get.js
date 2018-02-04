@@ -26,7 +26,7 @@ async function log(ctx, next) {
  * @param next
  * @return {Promise.<Array>}
  */
-export async function reminder(ctx, next) {
+export async function reminder(ctx, next, allkey) {
 
   // параметры запроса получаем из контекста
   const [phase, date_from, date_till, ...keys] = ctx.params.ref.split(',');
@@ -41,7 +41,7 @@ export async function reminder(ctx, next) {
   });
 
   // guid-ы ключей заменим data-объектами, а строки дат объектами moment()
-  const {parameters_keys} = $p.cat;
+  const {parameters_keys, characteristics} = $p.cat;
 
   return res.rows
   // фильтруем результат по положительному остатку и подходящему ключу
@@ -50,6 +50,7 @@ export async function reminder(ctx, next) {
     .map(({key, value}) => ({
       date: moment(key[1]),
       key: parameters_keys.get(key[2]),
+      allkey: (allkey) ? {obj: characteristics.get(key[3]), specimen: key[4], elm: key[5]} : undefined,
       ...value,
     }));
 }
