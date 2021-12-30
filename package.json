@@ -1,14 +1,10 @@
 {
   "name": "windowbuilder-planning",
   "description": "Planning engime for windowbuilder project",
-  "version": "2.0.254",
+  "version": "2.1.259",
   "author": "Evgeniy Malyarov <info@oknosoft.ru> (http://www.oknosoft.ru)",
   "license": "SEE LICENSE IN LICENSE.en.md",
-  "main": "index.js",
-  "engines": {
-    "node": "^12.18",
-    "npm": "^6.14"
-  },
+  "main": "server/index.js",
   "files": [
     "server/**",
     "LICENSE",

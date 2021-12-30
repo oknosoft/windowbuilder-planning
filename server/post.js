@@ -81,7 +81,7 @@ module.exports = function ($p, log, reminder) {
 
     const cur_day = moment().startOf('day').add(1, 'days');
     const start = (cur_day > moment(calc_order.date) ? cur_day : moment(calc_order.date)).add(days_to_execution, 'days');
-    const stop = start.clone().add(20, 'days');
+    const stop = start.clone().add(28, 'days');
 
     // получим остатки регистра по всем ключам сразу, чтобы два раза не бегать на сервер
     const rem = await reminder({params: {ref: `plan,${start.format('YYYYMMDD')},${stop.format('YYYYMMDD')},${Array.from(all_keys).join(',')}`}});
@@ -97,9 +97,9 @@ module.exports = function ($p, log, reminder) {
 
     const res_plan = [];
 
-    let ok = (rem_delivery.length > 0);
-    let i = 0;
     const length_delivery = rem_delivery.length;
+    let ok = (length_delivery > 0);
+    let i = 0;
 
     if(ok) {
       do {
