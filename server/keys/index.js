@@ -6,8 +6,8 @@ module.exports = function planning_keys($p, log) {
   const post  = require('./post')($p, log);
 
   if(process.env.PLANNING_KEYS) {
-    require('./init')($p, log);
-    require('./subscription')($p, log);
+    const accumulation = require('./init')($p, log);
+    require('./subscription')($p, log, accumulation);
   }
 
   return async function planningHandler(req, res) {

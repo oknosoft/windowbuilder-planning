@@ -9,7 +9,6 @@ class Accumulation extends classes.MetaEventEmitter {
     this.interval = 60000;
     // указатель на текущий таймер
     this.timer = 0;
-
   }
 
   /**
@@ -39,7 +38,6 @@ class Accumulation extends classes.MetaEventEmitter {
     CONNECTION LIMIT = -1
     IS_TEMPLATE = False;`)
       )
-      .then(() => client.query(`CREATE EXTENSION IF NOT EXISTS 'uuid-ossp';`))
       .then((create_metadata) => {
         const reconnect = (client) => {
           return client.end()
@@ -59,7 +57,7 @@ class Accumulation extends classes.MetaEventEmitter {
       .then(() => this.set_param('date', Date.now()))
       .then(() => {
         this.emit('init');
-        this.execute();
+        return this;
       })
       .catch((err) => this.emit('err', err));
   }
@@ -91,76 +89,6 @@ class Accumulation extends classes.MetaEventEmitter {
     return res;
   }
 
-  /**
-   * Фильтр для changes по class_name активных listeners
-   */
-  changes_selector() {
-    const names = new Set();
-    for(const {class_name} of this.listeners) {
-      names.add(class_name);
-    }
-    return {class_name: {$in: Array.from(names)}};
-  }
-
-  /**
-   * Читает и обрабатывает изменения конкретной базы
-   * @param db
-   */
-  changes(db) {
-    const limit = 200;
-    const conf = {
-      include_docs: true,
-      selector: this.changes_selector(),
-      limit,
-      batch_size: limit,
-    };
-    return this.get_param(`changes:${db.name}`)
-      .then((since) => {
-        if(since) {
-          conf.since = since;
-        }
-        return db.changes(conf);
-      })
-      .then((res) => {
-        let queue = Promise.resolve();
-        for(const {doc} of res.results) {
-          for(const {class_name, listener} of this.listeners) {
-            if(doc._id.startsWith(class_name + '|')) {
-              queue = queue
-                .then(() => listener(db, this, doc).catch((err) => {
-                  console.log(doc._id);
-                  this.emit('err', [err, doc]);
-                }));
-            }
-          }
-        }
-        return queue
-          .then(() => res.last_seq && conf.since !== res.last_seq && this.set_param(`changes:${db.name}`, res.last_seq))
-          .then(() => res.results.length === limit && this.changes(db));
-      });
-  }
-
-  /**
-   * Бежит по всем датабазам, читает изменения и перестраивает индексы
-   */
-  execute() {
-    clearTimeout(this.timer);
-    const {changes, execute, dbs, interval} = this;
-    return Promise.all(dbs.map(changes))
-      .catch((err) => this.emit('err', err))
-      .then(() => {
-        this.timer = setTimeout(execute, interval);
-      });
-  }
-
-  /**
-   * создаёт таблицы регистров
-   * @param def
-   */
-  create_tables(def = []) {
-
-  }
-
   set_param(name, value) {
     return this.client.query(`INSERT INTO settings (param, value) VALUES ('${name}', '${value}')
       ON CONFLICT (param) DO UPDATE SET value = EXCLUDED.value;`);
@@ -171,3 +99,5 @@ class Accumulation extends classes.MetaEventEmitter {
       .then(({rows}) => rows.length ? rows[0].value : '');
   }
 }
+
+module.exports = Accumulation;
