@@ -2,9 +2,9 @@
 
 /**
  * Корневой обработчик get-запросов
- * @param $p
- * @param log
- * @return {function(...[*]=)}
+ * @param {MetaEngine} $p
+ * @param {Function} log
+ * @return Object
  */
 module.exports = function ($p, log) {
 

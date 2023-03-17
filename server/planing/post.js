@@ -2,10 +2,10 @@
 
 /**
  * Корневой обработчик post-запросов
- * @param $p
- * @param log
- * @param reminder
- * @return {function(...[*]=)}
+ * @param {MetaEngine} $p
+ * @param {Function} log
+ * @param {Function} reminder
+ * @return Object
  */
 module.exports = function ($p, log, reminder) {
 
