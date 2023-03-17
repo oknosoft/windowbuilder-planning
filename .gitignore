@@ -1,19 +1,33 @@
+
 # Editor files
 .idea
 .vscode
+.nyc_output
 
-# OS files
-.DS_STORE
+# TODO
+.github
+
+# dependencies
+/node_modules
+
+# testing
+/coverage
 
 # Exclude compiled files
-/.eslintcache
-/tmp
+/build
+/scripts/stats.json
 *.map
 
-# Private config files
+# misc
+/.eslintcache
+.DS_Store
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.eslintcache
 /config/test.env
+/tmp
 
-# npm files
-node_modules
-package-lock.json
-*.log
+*.log*
+yarn.lock
