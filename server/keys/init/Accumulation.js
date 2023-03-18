@@ -5,10 +5,6 @@ class Accumulation extends classes.MetaEventEmitter {
   constructor($p) {
     super();
     this.$p = $p;
-    // интервал опроса и пересчета
-    this.interval = 60000;
-    // указатель на текущий таймер
-    this.timer = 0;
   }
 
   /**
@@ -25,7 +21,6 @@ class Accumulation extends classes.MetaEventEmitter {
     const client = new Client(conf);
     return client.connect()
       .then(() => {
-        const {job_prm} = $p;
         conf.database = 'planning-keys';
         return client.query(`SELECT 1 FROM pg_database WHERE datname = '${conf.database}'`)
       })
@@ -54,12 +49,11 @@ class Accumulation extends classes.MetaEventEmitter {
             }
           });
       })
-      .then(() => this.set_param('date', Date.now()))
+      .then(() => this.set_param('start', {date: new Date()}))
       .then(() => {
         this.emit('init');
         return this;
-      })
-      .catch((err) => this.emit('err', err));
+      });
   }
 
   /**
@@ -90,7 +84,7 @@ class Accumulation extends classes.MetaEventEmitter {
   }
 
   set_param(name, value) {
-    return this.client.query(`INSERT INTO settings (param, value) VALUES ('${name}', '${value}')
+    return this.client.query(`INSERT INTO settings (param, value) VALUES ('${name}', '${JSON.stringify(value)}')
       ON CONFLICT (param) DO UPDATE SET value = EXCLUDED.value;`);
   }
 
