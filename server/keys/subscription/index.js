@@ -1,14 +1,15 @@
 
 const limit = 120;
-let sleep;
+const states = 'Отправлен,Проверяется,Подтвержден,Отклонен,Отозван,Архив'.split(',');
 
 class Subscription {
 
   constructor($p, log, accumulation) {
-    sleep = $p.utils.sleep
+
     this.$p = $p;
     this.log = log;
     this.accumulation = accumulation;
+    this.reflect = require('./reflect')($p, log, accumulation);
     // интервал опроса и пересчета
     this.interval = 60000;
     // указатель на текущий таймер
@@ -19,25 +20,21 @@ class Subscription {
     this.ndbs = [];
   }
 
-  reflect({results, branch, abonent, year}) {
 
-  }
 
   read({db, since = '', branch, abonent, year}) {
     return db.changes({
       since,
       limit,
       include_docs: true,
-      selector: {class_name: {$in: ['cat.characteristics', 'doc.calc_order']}}
+      selector: {class_name: 'doc.calc_order', obj_delivery_state: {$in: states}}
     })
       .then(({results, last_seq}) => {
-        if(results.length) {
-          this.reflect({results, branch, abonent, year});
-          return this.read({db, since: last_seq, branch, abonent, year});
-        }
-        else {
-          return last_seq;
-        }
+        return results.length ?
+          this.reflect({db, results, branch, abonent, year})
+            .then(() => this.read({db, since: last_seq, branch, abonent, year}))
+          :
+          last_seq;
       });
   }
 
