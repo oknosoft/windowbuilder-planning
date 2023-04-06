@@ -1,4 +1,8 @@
 
+function datePrefix(date) {
+  const year = date.getFullYear();
+  return Number(`1${((year - 2000) * 12 + date.getMonth()).pad(3)}`);
+}
 
 module.exports = function ($p, log, acc) {
   const {utils: {sleep, blank}, cat: {branches}, doc: {calc_order}} = $p;
@@ -51,8 +55,13 @@ module.exports = function ($p, log, acc) {
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`, values);
   }
 
-  async function cx({ox, branch, abonent, year}) {
-
+  async function cx(ox) {
+    return acc.client.query(`INSERT INTO characteristics (ref, calc_order, leading_product, name)
+      VALUES ($1, $2, $3, $4)
+      ON CONFLICT (ref) DO UPDATE SET
+        calc_order = EXCLUDED.calc_order,
+        leading_product = EXCLUDED.leading_product,
+        name = EXCLUDED.name;`, [ox.valueOf(), ox.calc_order.valueOf(), ox.leading_product.valueOf(), ox.name]);
   }
 
   async function keys({doc, ox, branch, abonent, year}) {
@@ -60,7 +69,16 @@ module.exports = function ($p, log, acc) {
 
     }
     else {
-
+      const {rowCount} = await acc.client.query(`SELECT ref from keys WHERE
+        obj=$1 and specimen=0 and elm=0 and region=0`, [doc.valueOf()]);
+      if(!rowCount) {
+        const prefix =  datePrefix(doc.date);
+        const pq = await acc.client.query(`SELECT barcode from keys WHERE barcode<$1 and barcode>=$2
+            order by barcode desc limit 1`, [Number(`${prefix + 1}00000000`), Number(`${prefix}00000000`)]);
+        const barcode = pq.rowCount ? Number(pq.rows[0].barcode) + 1 : Number(`${prefix}00000000`);
+        return acc.client.query(`INSERT INTO keys (obj, specimen, elm, region, barcode) VALUES ($1, $2, $3, $4, $5);`,
+          [doc.valueOf(), 0, 0, 0, barcode]);
+      }
     }
   }
 
@@ -70,14 +88,14 @@ module.exports = function ($p, log, acc) {
       const {_id, _rev, ...attr} = result.doc;
       attr.ref = _id.substring(15);
       const doc = calc_order.create(attr, false, true);
-      const prod = await doc.load_production(false, db);
+      const prod = await doc.load_production(true, db);
       // запись в таблице calc_orders
       await order({doc, branch, abonent, year});
       // запись в таблице keys документа Расчёт
       await keys({doc, branch, abonent, year});
       for(const ox of prod) {
         // запись в таблице characteristics
-        await cx({ox, branch, abonent, year});
+        await cx(ox);
         // запись в таблице keys ключей продукции
         await keys({ox, branch, abonent, year});
       }

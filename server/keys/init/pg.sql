@@ -5,7 +5,7 @@
 -- Dumped from database version 14.7
 -- Dumped by pg_dump version 14.7
 
--- Started on 2023-03-28 22:43:03 MSK
+-- Started on 2023-04-06 14:41:51 MSK
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -28,19 +28,21 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA public;
 
 
 --
--- TOC entry 3361 (class 0 OID 0)
+-- TOC entry 3362 (class 0 OID 0)
 -- Dependencies: 2
--- Name: EXTENSION "uuid-ossp"; Type: COMMENT; Schema: -; Owner: -
+-- Name: EXTENSION "uuid-ossp"; Type: COMMENT; Schema: -; Owner:
 --
 
 COMMENT ON EXTENSION "uuid-ossp" IS 'generate universally unique identifiers (UUIDs)';
 
 
+SET default_tablespace = '';
+
 SET default_table_access_method = heap;
 
 --
 -- TOC entry 215 (class 1259 OID 3061481)
--- Name: calc_orders; Type: TABLE; Schema: public; Owner: -
+-- Name: calc_orders; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE public.calc_orders (
@@ -57,9 +59,11 @@ CREATE TABLE public.calc_orders (
 );
 
 
+ALTER TABLE public.calc_orders OWNER TO postgres;
+
 --
 -- TOC entry 213 (class 1259 OID 2900139)
--- Name: characteristics; Type: TABLE; Schema: public; Owner: -
+-- Name: characteristics; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE public.characteristics (
@@ -70,9 +74,11 @@ CREATE TABLE public.characteristics (
 );
 
 
+ALTER TABLE public.characteristics OWNER TO postgres;
+
 --
 -- TOC entry 212 (class 1259 OID 2899806)
--- Name: keys; Type: TABLE; Schema: public; Owner: -
+-- Name: keys; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE public.keys (
@@ -81,13 +87,15 @@ CREATE TABLE public.keys (
     specimen integer DEFAULT 1,
     elm integer DEFAULT 0,
     region integer DEFAULT 0,
-    barcode character(12)
+    barcode bigint DEFAULT 0
 );
 
 
+ALTER TABLE public.keys OWNER TO postgres;
+
 --
 -- TOC entry 214 (class 1259 OID 2900714)
--- Name: settings; Type: TABLE; Schema: public; Owner: -
+-- Name: settings; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE public.settings (
@@ -96,17 +104,19 @@ CREATE TABLE public.settings (
 );
 
 
+ALTER TABLE public.settings OWNER TO postgres;
+
 --
--- TOC entry 3206 (class 1259 OID 3061357)
--- Name: address; Type: INDEX; Schema: public; Owner: -
+-- TOC entry 3207 (class 1259 OID 3061357)
+-- Name: address; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE UNIQUE INDEX address ON public.keys USING btree (obj, specimen, elm, region);
 
 
 --
--- TOC entry 3210 (class 2606 OID 2900143)
--- Name: characteristics characteristics_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- TOC entry 3212 (class 2606 OID 2900143)
+-- Name: characteristics characteristics_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.characteristics
@@ -114,8 +124,8 @@ ALTER TABLE ONLY public.characteristics
 
 
 --
--- TOC entry 3208 (class 2606 OID 2899811)
--- Name: keys keys_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- TOC entry 3210 (class 2606 OID 2899811)
+-- Name: keys keys_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.keys
@@ -123,8 +133,8 @@ ALTER TABLE ONLY public.keys
 
 
 --
--- TOC entry 3214 (class 2606 OID 3061485)
--- Name: calc_orders orders_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- TOC entry 3216 (class 2606 OID 3061485)
+-- Name: calc_orders orders_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.calc_orders
@@ -132,8 +142,8 @@ ALTER TABLE ONLY public.calc_orders
 
 
 --
--- TOC entry 3212 (class 2606 OID 2900720)
--- Name: settings settings_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- TOC entry 3214 (class 2606 OID 2900720)
+-- Name: settings settings_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.settings
@@ -141,24 +151,23 @@ ALTER TABLE ONLY public.settings
 
 
 --
--- TOC entry 3215 (class 2606 OID 2900422)
--- Name: keys cx; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- TOC entry 3208 (class 1259 OID 3131305)
+-- Name: barcode; Type: INDEX; Schema: public; Owner: postgres
 --
 
-ALTER TABLE ONLY public.keys
-    ADD CONSTRAINT cx FOREIGN KEY (obj) REFERENCES public.characteristics(ref) NOT VALID;
+CREATE INDEX barcode ON public.keys USING brin (barcode int8_minmax_multi_ops);
 
 
 --
--- TOC entry 3216 (class 2606 OID 3061494)
--- Name: characteristics order; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- TOC entry 3217 (class 2606 OID 3061494)
+-- Name: characteristics order; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.characteristics
     ADD CONSTRAINT "order" FOREIGN KEY (calc_order) REFERENCES public.calc_orders(ref) NOT VALID;
 
 
--- Completed on 2023-03-28 22:43:03 MSK
+-- Completed on 2023-04-06 14:41:51 MSK
 
 --
 -- PostgreSQL database dump complete
