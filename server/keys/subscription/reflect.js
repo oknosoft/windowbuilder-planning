@@ -1,11 +1,24 @@
 
-function datePrefix(date) {
-  const year = date.getFullYear();
-  return Number(`1${((year - 2000) * 12 + date.getMonth()).pad(3)}`);
+// дата среза - полгода
+const slice = new Date();
+slice.setMonth(slice.getMonth() - 7);
+
+function findKey(rows, specimen, elm=0, region=0) {
+  return rows.find((v) => v.specimen == specimen && v.elm == elm && v.region == v.region);
 }
+
+const keysSQL = 'INSERT INTO keys (obj, specimen, elm, region, barcode) VALUES ($1, $2, $3, $4, $5);';
 
 module.exports = function ($p, log, acc) {
   const {utils: {sleep, blank}, cat: {branches}, doc: {calc_order}} = $p;
+
+  async function datePrefix(date) {
+    const year = date.getFullYear();
+    const prefix = Number(`1${((year - 2000) * 12 + date.getMonth()).pad(3)}`);
+    const pq = await acc.client.query(`SELECT barcode from keys WHERE barcode<$1 and barcode>=$2
+            order by barcode desc limit 1`, [Number(`${prefix + 1}00000000`), Number(`${prefix}00000000`)]);
+    return pq.rowCount ? Number(pq.rows[0].barcode) + 1 : Number(`${prefix}00000000`);
+  }
 
   async function order({doc, branch, abonent, year}) {
     const {ref, date, partner, organization, manager, department, number_doc} = doc;
@@ -64,20 +77,53 @@ module.exports = function ($p, log, acc) {
         name = EXCLUDED.name;`, [ox.valueOf(), ox.calc_order.valueOf(), ox.leading_product.valueOf(), ox.name]);
   }
 
-  async function keys({doc, ox, branch, abonent, year}) {
-    if(ox) {
+  async function keys({doc, row, branch, abonent, year}) {
+    let bartmp;
+    async function nextBarcode() {
+      if(bartmp) {
+        bartmp++;
+      }
+      else {
+        bartmp = await datePrefix(doc.date);
+      }
+      return bartmp;
+    }
 
+    if(row) {
+      const {characteristic} = row;
+      const obj = characteristic.valueOf()
+      // все записанные ключи текущей продукции
+      const keys = await acc.client.query(`SELECT * from keys WHERE obj=$1`, [obj]);
+      for(let specimen = 1; specimen <= row.quantity; specimen++) {
+        // по умолчанию, создаём для самой продукции, всех её слоёв, палок, заполнений и стёкол заполнений
+        if(!findKey(keys.rows, specimen)) {
+          await acc.client.query(keysSQL, [obj, specimen, 0, 0, await nextBarcode()]);
+        }
+        // для всех слоёв
+        for(const layer of characteristic.constructions) {
+          if(!findKey(keys.rows, -layer.cnstr)) {
+            await acc.client.query(keysSQL, [obj, specimen, -layer.cnstr, 0, await nextBarcode()]);
+          }
+        }
+        // для всех элементов, включая раскладку
+        for(const {elm} of characteristic.coordinates) {
+          if(!findKey(keys.rows, elm)) {
+            await acc.client.query(keysSQL, [obj, specimen, elm, 0, await nextBarcode()]);
+          }
+        }
+        // для всех рядов состава заполнений
+        for(const region of characteristic.glass_specification) {
+          if(!findKey(keys.rows, region.elm)) {
+            await acc.client.query(keysSQL, [obj, specimen, region.elm, 0, await nextBarcode()]);
+          }
+        }
+      }
     }
     else {
       const {rowCount} = await acc.client.query(`SELECT ref from keys WHERE
         obj=$1 and specimen=0 and elm=0 and region=0`, [doc.valueOf()]);
       if(!rowCount) {
-        const prefix =  datePrefix(doc.date);
-        const pq = await acc.client.query(`SELECT barcode from keys WHERE barcode<$1 and barcode>=$2
-            order by barcode desc limit 1`, [Number(`${prefix + 1}00000000`), Number(`${prefix}00000000`)]);
-        const barcode = pq.rowCount ? Number(pq.rows[0].barcode) + 1 : Number(`${prefix}00000000`);
-        return acc.client.query(`INSERT INTO keys (obj, specimen, elm, region, barcode) VALUES ($1, $2, $3, $4, $5);`,
-          [doc.valueOf(), 0, 0, 0, barcode]);
+        return acc.client.query(keysSQL, [doc.valueOf(), 0, 0, 0, await nextBarcode()]);
       }
     }
   }
@@ -88,20 +134,27 @@ module.exports = function ($p, log, acc) {
       const {_id, _rev, ...attr} = result.doc;
       attr.ref = _id.substring(15);
       const doc = calc_order.create(attr, false, true);
-      const prod = await doc.load_production(true, db);
       // запись в таблице calc_orders
       await order({doc, branch, abonent, year});
       // запись в таблице keys документа Расчёт
       await keys({doc, branch, abonent, year});
-      for(const ox of prod) {
-        // запись в таблице characteristics
-        await cx(ox);
-        // запись в таблице keys ключей продукции
-        await keys({ox, branch, abonent, year});
+
+      // ключи продукций и фрагментов продукций, генерируем только для заказов за последние полгода
+      if(doc.date > slice) {
+        const prod = await doc.load_production(true, db);
+        for(const row of doc.production) {
+          if(prod.includes(row.characteristic)) {
+            // запись в таблице characteristics
+            await cx(row.characteristic);
+            // запись в таблице keys ключей продукции
+            await keys({doc, row, branch, abonent, year});
+          }
+        }
+        for(const ox of prod) {
+          ox.unload();
+        }
       }
-      for(const ox of prod) {
-        ox.unload();
-      }
+
       doc.unload();
     }
   }
