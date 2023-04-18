@@ -7,7 +7,7 @@ function findKey(rows, specimen, elm=0, region=0) {
   return rows.find((v) => v.specimen == specimen && v.elm == elm && v.region == v.region);
 }
 
-const keysSQL = 'INSERT INTO keys (obj, specimen, elm, region, barcode, key_type) VALUES ($1, $2, $3, $4, $5, $6);';
+const keysSQL = 'INSERT INTO keys (obj, specimen, elm, region, barcode, type) VALUES ($1, $2, $3, $4, $5, $6);';
 
 module.exports = function ($p, log, acc) {
   const {utils: {sleep, blank}, cat: {branches}, doc: {calc_order}, enm: {elm_types}} = $p;
@@ -102,13 +102,13 @@ module.exports = function ($p, log, acc) {
         }
         // для всех слоёв
         for(const layer of characteristic.constructions) {
-          if(!findKey(keys.rows, -layer.cnstr)) {
+          if(!findKey(keys.rows, specimen, -layer.cnstr)) {
             await acc.client.query(keysSQL, [obj, specimen, -layer.cnstr, 0, await nextBarcode(), 'layer']);
           }
         }
         // для всех элементов, включая раскладку
         for(const {elm, elm_type} of characteristic.coordinates) {
-          if(!findKey(keys.rows, elm)) {
+          if(!findKey(keys.rows, specimen, elm)) {
             let key_type;
             switch (elm_type) {
               case elm_types.drainage:
@@ -139,8 +139,8 @@ module.exports = function ($p, log, acc) {
         }
         // для всех рядов состава заполнений
         for(const region of characteristic.glass_specification) {
-          if(!findKey(keys.rows, region.elm)) {
-            await acc.client.query(keysSQL, [obj, specimen, region.elm, 0, await nextBarcode(), 'glass']);
+          if(!findKey(keys.rows, specimen, elm, region.elm)) {
+            await acc.client.query(keysSQL, [obj, specimen, elm, region.elm, await nextBarcode(), 'glass']);
           }
         }
       }

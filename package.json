@@ -22,7 +22,9 @@
   "author": "Evgeniy Malyarov <info@oknosoft.ru> (https://oknosoft.ru)",
   "license": "SEE LICENSE IN LICENSE",
   "homepage": "https://github.com/oknosoft/windowbuilder/wiki",
-  "dependencies": {},
+  "dependencies": {
+    "ean13-lib": "^0.0.5"
+  },
   "devDependencies": {},
   "main": "server/index.js",
   "packageManager": "^yarn@1.22.19",
@@ -31,6 +33,5 @@
     "LICENSE",
     "LICENSE.ru.md"
   ],
-  "scripts": {
-  }
+  "scripts": {}
 }
