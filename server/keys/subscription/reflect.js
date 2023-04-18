@@ -7,10 +7,10 @@ function findKey(rows, specimen, elm=0, region=0) {
   return rows.find((v) => v.specimen == specimen && v.elm == elm && v.region == v.region);
 }
 
-const keysSQL = 'INSERT INTO keys (obj, specimen, elm, region, barcode) VALUES ($1, $2, $3, $4, $5);';
+const keysSQL = 'INSERT INTO keys (obj, specimen, elm, region, barcode, key_type) VALUES ($1, $2, $3, $4, $5, $6);';
 
 module.exports = function ($p, log, acc) {
-  const {utils: {sleep, blank}, cat: {branches}, doc: {calc_order}} = $p;
+  const {utils: {sleep, blank}, cat: {branches}, doc: {calc_order}, enm: {elm_types}} = $p;
 
   async function datePrefix(date) {
     const year = date.getFullYear();
@@ -97,24 +97,50 @@ module.exports = function ($p, log, acc) {
       for(let specimen = 1; specimen <= row.quantity; specimen++) {
         // по умолчанию, создаём для самой продукции, всех её слоёв, палок, заполнений и стёкол заполнений
         if(!findKey(keys.rows, specimen)) {
-          await acc.client.query(keysSQL, [obj, specimen, 0, 0, await nextBarcode()]);
+          const key_type = characteristic.coordinates.count() ? 'product' : 'other';
+          await acc.client.query(keysSQL, [obj, specimen, 0, 0, await nextBarcode(), key_type]);
         }
         // для всех слоёв
         for(const layer of characteristic.constructions) {
           if(!findKey(keys.rows, -layer.cnstr)) {
-            await acc.client.query(keysSQL, [obj, specimen, -layer.cnstr, 0, await nextBarcode()]);
+            await acc.client.query(keysSQL, [obj, specimen, -layer.cnstr, 0, await nextBarcode(), 'layer']);
           }
         }
         // для всех элементов, включая раскладку
-        for(const {elm} of characteristic.coordinates) {
+        for(const {elm, elm_type} of characteristic.coordinates) {
           if(!findKey(keys.rows, elm)) {
-            await acc.client.query(keysSQL, [obj, specimen, elm, 0, await nextBarcode()]);
+            let key_type;
+            switch (elm_type) {
+              case elm_types.drainage:
+              case elm_types.text:
+              case elm_types.line:
+              case elm_types.size:
+              case elm_types.radius:
+              case elm_types.cut:
+              case elm_types.tearing:
+              case elm_types.attachment:
+              case elm_types.adjoining:
+              case elm_types.furn:
+              case elm_types.compound:
+                continue;
+                break;
+              case elm_types.glass:
+              case elm_types.sandwich:
+                key_type = 'filling';
+                break;
+              case elm_types.layout:
+                key_type = 'layout';
+                break;
+              default:
+                key_type = 'profile';
+            }
+            await acc.client.query(keysSQL, [obj, specimen, elm, 0, await nextBarcode(), key_type]);
           }
         }
         // для всех рядов состава заполнений
         for(const region of characteristic.glass_specification) {
           if(!findKey(keys.rows, region.elm)) {
-            await acc.client.query(keysSQL, [obj, specimen, region.elm, 0, await nextBarcode()]);
+            await acc.client.query(keysSQL, [obj, specimen, region.elm, 0, await nextBarcode(), 'glass']);
           }
         }
       }
@@ -123,7 +149,7 @@ module.exports = function ($p, log, acc) {
       const {rowCount} = await acc.client.query(`SELECT ref from keys WHERE
         obj=$1 and specimen=0 and elm=0 and region=0`, [doc.valueOf()]);
       if(!rowCount) {
-        return acc.client.query(keysSQL, [doc.valueOf(), 0, 0, 0, await nextBarcode()]);
+        return acc.client.query(keysSQL, [doc.valueOf(), 0, 0, 0, await nextBarcode(), 'order']);
       }
     }
   }

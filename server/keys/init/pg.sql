@@ -35,6 +35,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA public;
 CREATE TYPE public.key_type AS ENUM (
     'order',
     'product',
+    'other',
     'layer',
     'profile',
     'filling',
