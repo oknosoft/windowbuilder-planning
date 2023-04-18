@@ -24,7 +24,7 @@ class Accumulation extends classes.MetaEventEmitter {
         conf.database = 'planning-keys';
         return client.query(`SELECT 1 FROM pg_database WHERE datname = '${conf.database}'`)
       })
-      .then(({rows}) => !rows.length && client.query(`CREATE DATABASE 'planning-keys'
+      .then(({rows}) => !rows.length && client.query(`CREATE DATABASE "planning-keys"
     WITH OWNER = postgres
     ENCODING = 'UTF8'
     LC_COLLATE = 'ru_RU.UTF-8@icu'
@@ -44,7 +44,7 @@ class Accumulation extends classes.MetaEventEmitter {
         return reconnect(client)
           .then(() => {
             if(create_metadata) {
-              return db_metadata()
+              return this.db_metadata()
                 .then(() => reconnect(this.client));
             }
           });

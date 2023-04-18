@@ -139,9 +139,10 @@ module.exports = function ($p, log, acc) {
         }
         // для всех рядов состава заполнений
         for(const region of characteristic.glass_specification) {
-          if(!findKey(keys.rows, specimen, elm, region.elm)) {
-            await acc.client.query(keysSQL, [obj, specimen, elm, region.elm, await nextBarcode(), 'glass']);
-          }
+          // TODO: расчёт ряда и регистрация
+          // if(!findKey(keys.rows, specimen, elm, region.elm)) {
+          //   await acc.client.query(keysSQL, [obj, specimen, elm, region.elm, await nextBarcode(), 'glass']);
+          // }
         }
       }
     }
