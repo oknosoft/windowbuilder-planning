@@ -31,7 +31,7 @@ class Subscription {
     })
       .then(({results, last_seq}) => {
         return results.length ?
-          this.reflect({db, results, branch, abonent, year})
+          this.reflect({db, results, last_seq, branch, abonent, year})
             .then(() => this.read({db, since: last_seq, branch, abonent, year}))
           :
           last_seq;
@@ -47,14 +47,12 @@ class Subscription {
           (!server.branches.length || server.branches.includes(branch.suffix))) {
         const db = branch.db('doc');
         dbs.push(db);
-        const prm = await accumulation.get_param(`b|${branch.ref}`);
-        if(!prm) {
-          try{
-            await this.read({db, branch, abonent: branch.owner, year});
-          }
-          catch (err) {
-            this.log(err);
-          }
+        const since = await accumulation.get_param(`b|${branch.ref}`) || '';
+        try{
+          await this.read({db, since, branch, abonent: branch.owner, year});
+        }
+        catch (err) {
+          this.log(err);
         }
       }
     }
@@ -62,9 +60,12 @@ class Subscription {
       if(server.abonents.includes(abonent.id)) {
         const db = abonent.db('doc');
         dbs.push(db);
-        const prm = await accumulation.get_param(`a|${abonent.ref}`);
-        if(!prm) {
-          await this.read({db, branch: branches.get(), abonent, year});
+        const since = await accumulation.get_param(`a|${abonent.ref}`);
+        try{
+          await this.read({db, since, branch: branches.get(), abonent, year});
+        }
+        catch (err) {
+          this.log(err);
         }
       }
     }

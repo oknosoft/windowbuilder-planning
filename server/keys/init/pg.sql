@@ -5,7 +5,7 @@
 -- Dumped from database version 14.7
 -- Dumped by pg_dump version 14.7
 
--- Started on 2023-04-07 11:16:39 MSK
+-- Started on 2023-04-12 20:20:13 MSK
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -25,6 +25,15 @@ SET row_security = off;
 --
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA public;
+
+
+--
+-- TOC entry 3365 (class 0 OID 0)
+-- Dependencies: 2
+-- Name: EXTENSION "uuid-ossp"; Type: COMMENT; Schema: -; Owner: -
+--
+
+COMMENT ON EXTENSION "uuid-ossp" IS 'generate universally unique identifiers (UUIDs)';
 
 
 --
@@ -150,11 +159,11 @@ ALTER TABLE ONLY public.settings
 
 
 --
--- TOC entry 3211 (class 1259 OID 3131305)
+-- TOC entry 3211 (class 1259 OID 3494689)
 -- Name: barcode; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX barcode ON public.keys USING brin (barcode int8_minmax_multi_ops);
+CREATE INDEX barcode ON public.keys USING btree (barcode);
 
 
 --
@@ -166,7 +175,7 @@ ALTER TABLE ONLY public.characteristics
     ADD CONSTRAINT "order" FOREIGN KEY (calc_order) REFERENCES public.calc_orders(ref) NOT VALID;
 
 
--- Completed on 2023-04-07 11:16:39 MSK
+-- Completed on 2023-04-12 20:20:13 MSK
 
 --
 -- PostgreSQL database dump complete

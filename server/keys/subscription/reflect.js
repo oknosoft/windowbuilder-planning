@@ -154,7 +154,7 @@ module.exports = function ($p, log, acc) {
     }
   }
 
-  async function reflect({db, results, branch, abonent, year}) {
+  async function reflect({db, results, last_seq, branch, abonent, year}) {
     await sleep(4);
     for(const result of results) {
       const {_id, _rev, ...attr} = result.doc;
@@ -183,6 +183,8 @@ module.exports = function ($p, log, acc) {
 
       doc.unload();
     }
+    const prm = branch.empty() ? `a|${abonent.ref}` : `b|${branch.ref}`;
+    return acc.set_param(prm, last_seq);
   }
 
   return reflect;
