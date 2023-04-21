@@ -24,19 +24,12 @@ function get($p, log, acc) {
 }
 
 async function info(code, acc, start) {
-  let sql;
-  if(code?.length === 12 || code?.length === 13) {
-    sql = `select * from keys where barcode = '${code.substring(0, 12)}'`;
-  }
-  else if(code?.length === 36) {
-    sql = `select * from keys where ref = '${code}'`;
-  }
-  else {
+  if(code?.length !== 12 && code?.length !== 13 && code?.length !== 36) {
     const err = new Error(`Code length error. Must be 12, 13 or 36 symbols, ${code?.length} received`);
     err.status = 404;
     throw err;
   }
-  const pq = await acc.client.query(sql);
+  const pq = await acc.client.query(`select * from qinfo($1)`, [code]);
   if(pq.rowCount) {
     const diff = hrtime(start);
     return Object.assign(pq.rows[0], {took: `${((diff[0] * NS_PER_SEC + diff[1])/1e6).round(1)} ms`});
