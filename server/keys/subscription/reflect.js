@@ -38,14 +38,10 @@ module.exports = function ($p, log, acc) {
     const production = [];
     for(const row of doc.production) {
       if (prod.includes(row.characteristic)) {
-        production.push(JSON.stringify({
-          nom: row.nom.valueOf(),
-          characteristic: row.characteristic.valueOf(),
-          quantity: row.quantity
-        }));
+        production.push({nom: row.nom.valueOf(), characteristic: row.characteristic.valueOf(), quantity: row.quantity});
       }
     }
-    values.push(production);
+    values.push(JSON.stringify(production));
     if(rowCount) {
       const tb = branches.get(rows[0].branch);
       if(branch.empty() && !tb.empty()) {
