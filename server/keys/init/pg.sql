@@ -5,7 +5,7 @@
 -- Dumped from database version 14.7
 -- Dumped by pg_dump version 14.7
 
--- Started on 2023-04-16 05:26:41 MSK
+-- Started on 2023-04-25 07:10:50 MSK
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -28,7 +28,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA public;
 
 
 --
--- TOC entry 861 (class 1247 OID 3176553)
+-- TOC entry 862 (class 1247 OID 3176553)
 -- Name: key_type; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -45,7 +45,18 @@ CREATE TYPE public.key_type AS ENUM (
 
 
 --
--- TOC entry 864 (class 1247 OID 3556323)
+-- TOC entry 868 (class 1247 OID 3698031)
+-- Name: prod_row; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.prod_row AS (
+	characteristic uuid,
+	quantity integer
+);
+
+
+--
+-- TOC entry 865 (class 1247 OID 3556323)
 -- Name: qinfo_type; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -67,7 +78,7 @@ CREATE TYPE public.qinfo_type AS (
 
 
 --
--- TOC entry 238 (class 1255 OID 3558639)
+-- TOC entry 239 (class 1255 OID 3558639)
 -- Name: qinfo(character varying); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -146,7 +157,8 @@ CREATE TABLE public.calc_orders (
     partner uuid,
     organization uuid,
     author uuid,
-    department uuid
+    department uuid,
+    production json
 );
 
 
@@ -191,7 +203,7 @@ CREATE TABLE public.settings (
 
 
 --
--- TOC entry 3215 (class 1259 OID 3061357)
+-- TOC entry 3219 (class 1259 OID 3061357)
 -- Name: address; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -199,7 +211,7 @@ CREATE UNIQUE INDEX address ON public.keys USING btree (obj, specimen, elm, regi
 
 
 --
--- TOC entry 3220 (class 2606 OID 2900143)
+-- TOC entry 3224 (class 2606 OID 2900143)
 -- Name: characteristics characteristics_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -208,7 +220,7 @@ ALTER TABLE ONLY public.characteristics
 
 
 --
--- TOC entry 3218 (class 2606 OID 2899811)
+-- TOC entry 3222 (class 2606 OID 2899811)
 -- Name: keys keys_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -217,7 +229,7 @@ ALTER TABLE ONLY public.keys
 
 
 --
--- TOC entry 3224 (class 2606 OID 3061485)
+-- TOC entry 3228 (class 2606 OID 3061485)
 -- Name: calc_orders orders_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -226,7 +238,7 @@ ALTER TABLE ONLY public.calc_orders
 
 
 --
--- TOC entry 3222 (class 2606 OID 2900720)
+-- TOC entry 3226 (class 2606 OID 2900720)
 -- Name: settings settings_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -235,7 +247,7 @@ ALTER TABLE ONLY public.settings
 
 
 --
--- TOC entry 3216 (class 1259 OID 3494689)
+-- TOC entry 3220 (class 1259 OID 3494689)
 -- Name: barcode; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -243,7 +255,7 @@ CREATE INDEX barcode ON public.keys USING btree (barcode);
 
 
 --
--- TOC entry 3225 (class 2606 OID 3061494)
+-- TOC entry 3229 (class 2606 OID 3061494)
 -- Name: characteristics order; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -251,7 +263,7 @@ ALTER TABLE ONLY public.characteristics
     ADD CONSTRAINT "order" FOREIGN KEY (calc_order) REFERENCES public.calc_orders(ref) NOT VALID;
 
 
--- Completed on 2023-04-16 05:26:41 MSK
+-- Completed on 2023-04-25 07:10:50 MSK
 
 --
 -- PostgreSQL database dump complete

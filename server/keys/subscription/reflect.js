@@ -20,7 +20,7 @@ module.exports = function ($p, log, acc) {
     return pq.rowCount ? Number(pq.rows[0].barcode) + 1 : Number(`${prefix}00000000`);
   }
 
-  async function order({doc, branch, abonent, year}) {
+  async function order({doc, branch, abonent, year, prod}) {
     const {ref, date, partner, organization, manager, department, number_doc} = doc;
     const {rowCount, rows} = await acc.client.query(`SELECT branch from calc_orders WHERE ref=$1`, [ref]);
     const values = [
@@ -33,8 +33,15 @@ module.exports = function ($p, log, acc) {
       organization.valueOf(),
       manager.valueOf(),
       department.valueOf(),
-      number_doc
+      number_doc,
     ];
+    const production = [];
+    for(const row of doc.production) {
+      if (prod.includes(row.characteristic)) {
+        production.push({nom: row.nom.valueOf(), characteristic: row.characteristic.valueOf(), quantity: row.quantity});
+      }
+    }
+    values.push(production);
     if(rowCount) {
       const tb = branches.get(rows[0].branch);
       if(branch.empty() && !tb.empty()) {
@@ -60,12 +67,13 @@ module.exports = function ($p, log, acc) {
             organization = $7,
             author = $8,
             department = $9,
-            number_doc = $10
+            number_doc = $10,
+            production = $11
             WHERE ref=$1;`, values);
     }
     return acc.client.query(`INSERT INTO calc_orders
-            (ref, abonent, branch, year, date, partner, organization, author, department, number_doc)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`, values);
+            (ref, abonent, branch, year, date, partner, organization, author, department, number_doc, production)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`, values);
   }
 
   async function cx(ox) {
@@ -91,59 +99,63 @@ module.exports = function ($p, log, acc) {
 
     if(row) {
       const {characteristic} = row;
-      const obj = characteristic.valueOf()
-      // все записанные ключи текущей продукции
-      const keys = await acc.client.query(`SELECT * from keys WHERE obj=$1`, [obj]);
-      for(let specimen = 1; specimen <= row.quantity; specimen++) {
-        // по умолчанию, создаём для самой продукции, всех её слоёв, палок, заполнений и стёкол заполнений
-        if(!findKey(keys.rows, specimen)) {
-          const key_type = characteristic.coordinates.count() ? 'product' : 'other';
-          await acc.client.query(keysSQL, [obj, specimen, 0, 0, await nextBarcode(), key_type]);
-        }
-        // для всех слоёв
-        for(const layer of characteristic.constructions) {
-          if(!findKey(keys.rows, specimen, -layer.cnstr)) {
-            await acc.client.query(keysSQL, [obj, specimen, -layer.cnstr, 0, await nextBarcode(), 'layer']);
+      const obj = characteristic.valueOf();
+      try {
+        // все записанные ключи текущей продукции
+        const keys = await acc.client.query(`SELECT * from keys WHERE obj=$1`, [obj]);
+        for(let specimen = 1; specimen <= row.quantity; specimen++) {
+          // по умолчанию, создаём для самой продукции, всех её слоёв, палок, заполнений и стёкол заполнений
+          if(!findKey(keys.rows, specimen)) {
+            const key_type = characteristic.coordinates.count() ? 'product' : 'other';
+            await acc.client.query(keysSQL, [obj, specimen, 0, 0, await nextBarcode(), key_type]);
           }
-        }
-        // для всех элементов, включая раскладку
-        for(const {elm, elm_type} of characteristic.coordinates) {
-          if(!findKey(keys.rows, specimen, elm)) {
-            let key_type;
-            switch (elm_type) {
-              case elm_types.drainage:
-              case elm_types.text:
-              case elm_types.line:
-              case elm_types.size:
-              case elm_types.radius:
-              case elm_types.cut:
-              case elm_types.tearing:
-              case elm_types.attachment:
-              case elm_types.adjoining:
-              case elm_types.furn:
-              case elm_types.compound:
-                continue;
-                break;
-              case elm_types.glass:
-              case elm_types.sandwich:
-                key_type = 'filling';
-                break;
-              case elm_types.layout:
-                key_type = 'layout';
-                break;
-              default:
-                key_type = 'profile';
+          // для всех слоёв
+          for(const layer of characteristic.constructions) {
+            if(!findKey(keys.rows, specimen, -layer.cnstr)) {
+              await acc.client.query(keysSQL, [obj, specimen, -layer.cnstr, 0, await nextBarcode(), 'layer']);
             }
-            await acc.client.query(keysSQL, [obj, specimen, elm, 0, await nextBarcode(), key_type]);
+          }
+          // для всех элементов, включая раскладку
+          for(const {elm, elm_type} of characteristic.coordinates) {
+            if(!findKey(keys.rows, specimen, elm)) {
+              let key_type;
+              switch (elm_type) {
+                case elm_types.drainage:
+                case elm_types.text:
+                case elm_types.line:
+                case elm_types.size:
+                case elm_types.radius:
+                case elm_types.cut:
+                case elm_types.tearing:
+                case elm_types.attachment:
+                case elm_types.adjoining:
+                case elm_types.furn:
+                case elm_types.compound:
+                  continue;
+                case elm_types.glass:
+                case elm_types.sandwich:
+                  key_type = 'filling';
+                  break;
+                case elm_types.layout:
+                  key_type = 'layout';
+                  break;
+                default:
+                  key_type = 'profile';
+              }
+              await acc.client.query(keysSQL, [obj, specimen, elm, 0, await nextBarcode(), key_type]);
+            }
+          }
+          // для всех рядов состава заполнений
+          for(const region of characteristic.glass_specification) {
+            // TODO: расчёт ряда и регистрация
+            // if(!findKey(keys.rows, specimen, elm, region.elm)) {
+            //   await acc.client.query(keysSQL, [obj, specimen, elm, region.elm, await nextBarcode(), 'glass']);
+            // }
           }
         }
-        // для всех рядов состава заполнений
-        for(const region of characteristic.glass_specification) {
-          // TODO: расчёт ряда и регистрация
-          // if(!findKey(keys.rows, specimen, elm, region.elm)) {
-          //   await acc.client.query(keysSQL, [obj, specimen, elm, region.elm, await nextBarcode(), 'glass']);
-          // }
-        }
+      }
+      catch (e) {
+        throw new Error(`${e.message}\nobj=${obj}\nbranch=${branch.valueOf()}`);
       }
     }
     else {
@@ -161,18 +173,24 @@ module.exports = function ($p, log, acc) {
       const {_id, _rev, ...attr} = result.doc;
       attr.ref = _id.substring(15);
       const doc = calc_order.create(attr, false, true);
+      const prod = await doc.load_production(true, db);
       // запись в таблице calc_orders
-      await order({doc, branch, abonent, year});
+      await order({doc, branch, abonent, year, prod});
       // запись в таблице keys документа Расчёт
       await keys({doc, branch, abonent, year});
 
       // ключи продукций и фрагментов продукций, генерируем только для заказов за последние полгода
       if(doc.date > slice) {
-        const prod = await doc.load_production(true, db);
         for(const row of doc.production) {
           if(prod.includes(row.characteristic)) {
             // запись в таблице characteristics
-            await cx(row.characteristic);
+            try{
+              await cx(row.characteristic);
+            }
+            catch (e) {
+              throw new Error(`${e.message}\nobj=${row.characteristic.valueOf()}\nbranch=${branch.valueOf()}`);
+            }
+
             // запись в таблице keys ключей продукции
             await keys({doc, row, branch, abonent, year});
           }
