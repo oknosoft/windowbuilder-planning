@@ -158,7 +158,10 @@ module.exports = function ($p, log, acc) {
         }
       }
       catch (e) {
-        throw new Error(`${e.message}\nobj=${obj}\nbranch=${branch.valueOf()}`);
+        throw new Error(`${e.message
+        }\nobj=${obj
+        }\nbranch='${branch.suffix}' ${branch.valueOf()
+        }\nabonent=${abonent.id}`);
       }
     }
     else {
@@ -185,13 +188,16 @@ module.exports = function ($p, log, acc) {
       // ключи продукций и фрагментов продукций, генерируем только для заказов за последние полгода
       if(doc.date > slice) {
         for(const row of doc.production) {
-          if(prod.includes(row.characteristic)) {
+          if(prod.includes(row.characteristic) && row.characteristic.calc_order === doc) {
             // запись в таблице characteristics
             try{
               await cx(row.characteristic);
             }
             catch (e) {
-              throw new Error(`${e.message}\nobj=${row.characteristic.valueOf()}\nbranch=${branch.valueOf()}`);
+              throw new Error(`${e.message
+              }\nobj=${row.characteristic.valueOf()
+              }\nbranch='${branch.suffix}' ${branch.valueOf()
+              }\nabonent=${abonent.id}`);
             }
 
             // запись в таблице keys ключей продукции
