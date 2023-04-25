@@ -111,12 +111,15 @@ module.exports = function ($p, log, acc) {
           }
           // для всех слоёв
           for(const layer of characteristic.constructions) {
-            if(!findKey(keys.rows, specimen, -layer.cnstr)) {
+            if(layer.cnstr && !findKey(keys.rows, specimen, -layer.cnstr)) {
               await acc.client.query(keysSQL, [obj, specimen, -layer.cnstr, 0, await nextBarcode(), 'layer']);
             }
           }
           // для всех элементов, включая раскладку
-          for(const {elm, elm_type} of characteristic.coordinates) {
+          for(const {cnstr, elm, elm_type} of characteristic.coordinates) {
+            if(!cnstr || !elm) {
+              continue;
+            }
             if(!findKey(keys.rows, specimen, elm)) {
               let key_type;
               switch (elm_type) {
