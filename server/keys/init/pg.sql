@@ -5,7 +5,7 @@
 -- Dumped from database version 14.7
 -- Dumped by pg_dump version 14.7
 
--- Started on 2023-04-25 07:10:50 MSK
+-- Started on 2023-04-25 07:50:26 MSK
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -28,8 +28,17 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA public;
 
 
 --
+-- TOC entry 3374 (class 0 OID 0)
+-- Dependencies: 2
+-- Name: EXTENSION "uuid-ossp"; Type: COMMENT; Schema: -; Owner:
+--
+
+COMMENT ON EXTENSION "uuid-ossp" IS 'generate universally unique identifiers (UUIDs)';
+
+
+--
 -- TOC entry 862 (class 1247 OID 3176553)
--- Name: key_type; Type: TYPE; Schema: public; Owner: -
+-- Name: key_type; Type: TYPE; Schema: public; Owner: postgres
 --
 
 CREATE TYPE public.key_type AS ENUM (
@@ -44,9 +53,11 @@ CREATE TYPE public.key_type AS ENUM (
 );
 
 
+ALTER TYPE public.key_type OWNER TO postgres;
+
 --
 -- TOC entry 868 (class 1247 OID 3698031)
--- Name: prod_row; Type: TYPE; Schema: public; Owner: -
+-- Name: prod_row; Type: TYPE; Schema: public; Owner: postgres
 --
 
 CREATE TYPE public.prod_row AS (
@@ -55,9 +66,11 @@ CREATE TYPE public.prod_row AS (
 );
 
 
+ALTER TYPE public.prod_row OWNER TO postgres;
+
 --
 -- TOC entry 865 (class 1247 OID 3556323)
--- Name: qinfo_type; Type: TYPE; Schema: public; Owner: -
+-- Name: qinfo_type; Type: TYPE; Schema: public; Owner: postgres
 --
 
 CREATE TYPE public.qinfo_type AS (
@@ -77,9 +90,11 @@ CREATE TYPE public.qinfo_type AS (
 );
 
 
+ALTER TYPE public.qinfo_type OWNER TO postgres;
+
 --
 -- TOC entry 239 (class 1255 OID 3558639)
--- Name: qinfo(character varying); Type: FUNCTION; Schema: public; Owner: -
+-- Name: qinfo(character varying); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
 CREATE FUNCTION public.qinfo(code character varying) RETURNS public.qinfo_type
@@ -93,7 +108,7 @@ declare
 	icode bigint;
 	ucode uuid;
 begin
-  -- ищем запись в keys
+  /* ищем запись в keys */
   if(char_length(code) = 13) then
 	code = substring(code, 1, 12);
   end if;
@@ -105,7 +120,7 @@ begin
     SELECT * INTO keys_row FROM keys WHERE ref=ucode;
   end if;
 
-  -- подклеиваем заказ и прочую инфу
+  /* подклеиваем заказ и прочую инфу */
   if keys_row.type is null then
 	RAISE NOTICE 'null';
   elseif keys_row.type = 'order' then
@@ -114,7 +129,6 @@ begin
 	SELECT * INTO cx_row FROM characteristics WHERE ref=keys_row.obj;
 	SELECT * INTO order_row FROM calc_orders WHERE ref=cx_row.calc_order;
   end if;
-  --   uuid,  character varying(200),
   tmp.abonent = order_row.abonent;
   tmp.year = order_row.year;
   tmp.branch = order_row.branch;
@@ -140,11 +154,15 @@ end
 $$;
 
 
+ALTER FUNCTION public.qinfo(code character varying) OWNER TO postgres;
+
+SET default_tablespace = '';
+
 SET default_table_access_method = heap;
 
 --
 -- TOC entry 215 (class 1259 OID 3061481)
--- Name: calc_orders; Type: TABLE; Schema: public; Owner: -
+-- Name: calc_orders; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE public.calc_orders (
@@ -162,9 +180,11 @@ CREATE TABLE public.calc_orders (
 );
 
 
+ALTER TABLE public.calc_orders OWNER TO postgres;
+
 --
 -- TOC entry 213 (class 1259 OID 2900139)
--- Name: characteristics; Type: TABLE; Schema: public; Owner: -
+-- Name: characteristics; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE public.characteristics (
@@ -175,9 +195,11 @@ CREATE TABLE public.characteristics (
 );
 
 
+ALTER TABLE public.characteristics OWNER TO postgres;
+
 --
 -- TOC entry 212 (class 1259 OID 2899806)
--- Name: keys; Type: TABLE; Schema: public; Owner: -
+-- Name: keys; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE public.keys (
@@ -191,9 +213,11 @@ CREATE TABLE public.keys (
 );
 
 
+ALTER TABLE public.keys OWNER TO postgres;
+
 --
 -- TOC entry 214 (class 1259 OID 2900714)
--- Name: settings; Type: TABLE; Schema: public; Owner: -
+-- Name: settings; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE public.settings (
@@ -202,9 +226,11 @@ CREATE TABLE public.settings (
 );
 
 
+ALTER TABLE public.settings OWNER TO postgres;
+
 --
 -- TOC entry 3219 (class 1259 OID 3061357)
--- Name: address; Type: INDEX; Schema: public; Owner: -
+-- Name: address; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE UNIQUE INDEX address ON public.keys USING btree (obj, specimen, elm, region);
@@ -212,7 +238,7 @@ CREATE UNIQUE INDEX address ON public.keys USING btree (obj, specimen, elm, regi
 
 --
 -- TOC entry 3224 (class 2606 OID 2900143)
--- Name: characteristics characteristics_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: characteristics characteristics_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.characteristics
@@ -221,7 +247,7 @@ ALTER TABLE ONLY public.characteristics
 
 --
 -- TOC entry 3222 (class 2606 OID 2899811)
--- Name: keys keys_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: keys keys_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.keys
@@ -230,7 +256,7 @@ ALTER TABLE ONLY public.keys
 
 --
 -- TOC entry 3228 (class 2606 OID 3061485)
--- Name: calc_orders orders_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: calc_orders orders_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.calc_orders
@@ -239,7 +265,7 @@ ALTER TABLE ONLY public.calc_orders
 
 --
 -- TOC entry 3226 (class 2606 OID 2900720)
--- Name: settings settings_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: settings settings_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.settings
@@ -248,7 +274,7 @@ ALTER TABLE ONLY public.settings
 
 --
 -- TOC entry 3220 (class 1259 OID 3494689)
--- Name: barcode; Type: INDEX; Schema: public; Owner: -
+-- Name: barcode; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX barcode ON public.keys USING btree (barcode);
@@ -256,14 +282,14 @@ CREATE INDEX barcode ON public.keys USING btree (barcode);
 
 --
 -- TOC entry 3229 (class 2606 OID 3061494)
--- Name: characteristics order; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: characteristics order; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.characteristics
     ADD CONSTRAINT "order" FOREIGN KEY (calc_order) REFERENCES public.calc_orders(ref) NOT VALID;
 
 
--- Completed on 2023-04-25 07:10:50 MSK
+-- Completed on 2023-04-25 07:50:26 MSK
 
 --
 -- PostgreSQL database dump complete

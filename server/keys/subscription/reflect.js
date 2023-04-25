@@ -38,7 +38,11 @@ module.exports = function ($p, log, acc) {
     const production = [];
     for(const row of doc.production) {
       if (prod.includes(row.characteristic)) {
-        production.push({nom: row.nom.valueOf(), characteristic: row.characteristic.valueOf(), quantity: row.quantity});
+        production.push(JSON.stringify({
+          nom: row.nom.valueOf(),
+          characteristic: row.characteristic.valueOf(),
+          quantity: row.quantity
+        }));
       }
     }
     values.push(production);
