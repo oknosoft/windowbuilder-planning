@@ -100,6 +100,11 @@ module.exports = function ($p, log, acc) {
     if(row) {
       const {characteristic} = row;
       const obj = characteristic.valueOf();
+      if(obj.length !== 36) {
+        return log(new Error(`Ошибка формата uid\nobj=${obj
+        }\nbranch='${branch.suffix}' ${branch.valueOf()
+        }\nabonent=${abonent.id}`));
+      }
       try {
         // все записанные ключи текущей продукции
         const keys = await acc.client.query(`SELECT * from keys WHERE obj=$1`, [obj]);
@@ -116,8 +121,9 @@ module.exports = function ($p, log, acc) {
             }
           }
           // для всех элементов, включая раскладку
+          const elmnts = new Set();
           for(const {cnstr, elm, elm_type} of characteristic.coordinates) {
-            if(!cnstr || !elm) {
+            if(!cnstr || !elm || elmnts.has(elm)) {
               continue;
             }
             if(!findKey(keys.rows, specimen, elm)) {
@@ -146,6 +152,7 @@ module.exports = function ($p, log, acc) {
                   key_type = 'profile';
               }
               await acc.client.query(keysSQL, [obj, specimen, elm, 0, await nextBarcode(), key_type]);
+              elmnts.add(elm);
             }
           }
           // для всех рядов состава заполнений
