@@ -77,12 +77,18 @@ module.exports = function ($p, log, acc) {
   }
 
   async function cx(ox) {
+    const obj = ox.valueOf();
+    if(obj.length !== 36) {
+      return log(new Error(`Ошибка формата uid\nobj=${obj
+      }\nbranch='${branch.suffix}' ${branch.valueOf()
+      }\nabonent=${abonent.id}`));
+    }
     return acc.client.query(`INSERT INTO characteristics (ref, calc_order, leading_product, name)
       VALUES ($1, $2, $3, $4)
       ON CONFLICT (ref) DO UPDATE SET
         calc_order = EXCLUDED.calc_order,
         leading_product = EXCLUDED.leading_product,
-        name = EXCLUDED.name;`, [ox.valueOf(), ox.calc_order.valueOf(), ox.leading_product.valueOf(), ox.name]);
+        name = EXCLUDED.name;`, [obj, ox.calc_order.valueOf(), ox.leading_product.valueOf(), ox.name]);
   }
 
   async function keys({doc, row, branch, abonent, year}) {
