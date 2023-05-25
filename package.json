@@ -7,7 +7,7 @@
     "url": "https://github.com/oknosoft/windowbuilder-planning.git"
   },
   "engines": {
-    "node": "^16.13",
+    "node": ">=16.13",
     "yarn": "^1.22"
   },
   "keywords": [
