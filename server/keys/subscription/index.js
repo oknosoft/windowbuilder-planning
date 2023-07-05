@@ -58,7 +58,8 @@ class Subscription {
     }
     for(const abonent of abonents) {
       if(server.abonents.includes(abonent.id)) {
-        const db = abonent.db('doc');
+        const {job_prm: {server}, adapters: {pouch}} = this.$p;
+        const db = server.single_db ? pouch.remote.doc : abonent.db('doc');
         dbs.push(db);
         const since = await accumulation.get_param(`a|${abonent.ref}`);
         try{

@@ -10,7 +10,16 @@ function findKey(rows, specimen, elm=0, region=0) {
 const keysSQL = 'INSERT INTO keys (obj, specimen, elm, region, barcode, type) VALUES ($1, $2, $3, $4, $5, $6);';
 
 module.exports = function ($p, log, acc) {
-  const {utils: {sleep, blank}, cat: {branches}, doc: {calc_order}, enm: {elm_types}} = $p;
+  const {utils: {sleep, blank}, cat: {branches}, doc: {calc_order}, enm: {elm_types, inserts_glass_types}} = $p;
+  const glrt = [
+    inserts_glass_types.Заполнение,
+    inserts_glass_types.СтеклоСПодогревом,
+    inserts_glass_types.СтеклоЗакаленное,
+    inserts_glass_types.СтеклоЭнергоСб,
+    inserts_glass_types.СтеклоЦветное,
+    inserts_glass_types.Триплекс,
+  ];
+
 
   async function datePrefix(date) {
     const year = date.getFullYear();
@@ -159,14 +168,20 @@ module.exports = function ($p, log, acc) {
               }
               await acc.client.query(keysSQL, [obj, specimen, elm, 0, await nextBarcode(), key_type]);
               elmnts.add(elm);
+
+              // для всех рядов состава заполнений
+              if(elm_type.is('glass')) {
+                characteristic.glass_specification.find_rows({elm})
+                  .forEach(async ({_row: {inset, region}}, index) => {
+                    if(glrt.includes(inset.insert_glass_type)) {
+                      index++;
+                      if(!findKey(keys.rows, specimen, elm, index)) {
+                        await acc.client.query(keysSQL, [obj, specimen, elm, index, await nextBarcode(), 'glunit']);
+                      }
+                    }
+                  });
+              }
             }
-          }
-          // для всех рядов состава заполнений
-          for(const region of characteristic.glass_specification) {
-            // TODO: расчёт ряда и регистрация
-            // if(!findKey(keys.rows, specimen, elm, region.elm)) {
-            //   await acc.client.query(keysSQL, [obj, specimen, elm, region.elm, await nextBarcode(), 'glass']);
-            // }
           }
         }
       }

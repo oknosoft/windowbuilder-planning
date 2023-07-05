@@ -2,10 +2,10 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 14.7
--- Dumped by pg_dump version 14.7
+-- Dumped from database version 14.8
+-- Dumped by pg_dump version 14.8
 
--- Started on 2023-04-25 07:50:26 MSK
+-- Started on 2023-07-05 13:44:29 MSK
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -48,6 +48,7 @@ CREATE TYPE public.key_type AS ENUM (
     'profile',
     'filling',
     'glass',
+    'glunit',
     'layout',
     'other'
 );
@@ -289,9 +290,8 @@ ALTER TABLE ONLY public.characteristics
     ADD CONSTRAINT "order" FOREIGN KEY (calc_order) REFERENCES public.calc_orders(ref) NOT VALID;
 
 
--- Completed on 2023-04-25 07:50:26 MSK
+-- Completed on 2023-07-05 13:44:29 MSK
 
 --
 -- PostgreSQL database dump complete
 --
-
