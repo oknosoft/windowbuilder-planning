@@ -202,7 +202,8 @@ module.exports = function ($p, log, acc) {
   }
 
   async function reflect({db, results, last_seq, branch, abonent, year}) {
-    await sleep(4);
+    await sleep(2);
+    const docs = [];
     for(const result of results) {
       const {_id, _rev, ...attr} = result.doc;
       attr.ref = _id.substring(15);
@@ -214,6 +215,7 @@ module.exports = function ($p, log, acc) {
       }
       const doc = calc_order.create(attr, false, true);
       const prod = await doc.load_production(true, db);
+      docs.push({doc, prod});
       // запись в таблице calc_orders
       await order({doc, branch, abonent, year, prod});
       // запись в таблице keys документа Расчёт
@@ -238,15 +240,10 @@ module.exports = function ($p, log, acc) {
             await keys({doc, row, branch, abonent, year});
           }
         }
-        for(const ox of prod) {
-          ox.unload();
-        }
       }
-
-      doc.unload();
     }
     const prm = branch.empty() ? `a|${abonent.ref}` : `b|${branch.ref}`;
-    return acc.set_param(prm, last_seq);
+    return {prm, last_seq, docs};
   }
 
   return reflect;

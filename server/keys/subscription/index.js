@@ -9,7 +9,9 @@ class Subscription {
     this.$p = $p;
     this.log = log;
     this.accumulation = accumulation;
-    this.reflect = require('./reflect')($p, log, accumulation);
+    // внешние подписчики, могут поместить сюда свои методы для расчёта своих индексов
+    this.listeners = [];
+    this._reflect = require('./reflect')($p, log, accumulation)
     // интервал опроса и пересчета
     this.interval = 60000;
     // указатель на текущий таймер
@@ -20,7 +22,19 @@ class Subscription {
     this.ndbs = [];
   }
 
-
+  async reflect(attr) {
+    let {prm, last_seq, docs} = await this._reflect(attr);
+    for(const listener of this.listeners) {
+      await listener.call(this, {...attr, docs});
+    }
+    for(const {doc, prod} of docs) {
+      for(const ox of prod) {
+        ox.unload();
+      }
+      doc.unload();
+    }
+    this.accumulation.set_param(prm, last_seq);
+  }
 
   read({db, since = '', branch, abonent, year}) {
     return db.changes({
@@ -76,9 +90,11 @@ class Subscription {
 
 // слушает базы всех отделов всех абонентов и создаёт по событиям, ключи
 module.exports = function keys_subscription($p, log, accumulation) {
-  accumulation.init()
+  return accumulation
+    .init()
     .then(() => {
       const subscription = new Subscription($p, log, accumulation);
+      $p.md.emit('planning_keys', {subscription, accumulation});
       return subscription.subscribe();
     })
     .catch(log);

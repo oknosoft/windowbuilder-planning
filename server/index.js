@@ -1,5 +1,9 @@
 
-const planning = require('./planing');
+//const planning = require('./planing');
 const keys = require('./keys');
+const needs = require('./needs');
 
-module.exports = {planning, keys};
+module.exports = function planning($p, log, route) {
+  keys($p, log, route);
+  needs($p, log, route);
+}
