@@ -11,14 +11,7 @@ const keysSQL = 'INSERT INTO keys (obj, specimen, elm, region, barcode, type) VA
 
 module.exports = function ($p, log, acc) {
   const {utils: {sleep, blank}, cat: {branches}, doc: {calc_order}, enm: {elm_types, inserts_glass_types}} = $p;
-  const glrt = [
-    inserts_glass_types.Заполнение,
-    inserts_glass_types.СтеклоСПодогревом,
-    inserts_glass_types.СтеклоЗакаленное,
-    inserts_glass_types.СтеклоЭнергоСб,
-    inserts_glass_types.СтеклоЦветное,
-    inserts_glass_types.Триплекс,
-  ];
+  const glrt = require('./glrt')($p);
 
 
   async function datePrefix(date) {
