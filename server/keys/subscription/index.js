@@ -1,5 +1,6 @@
 
-const limit = 120;
+const limit = 120;  // объектов за такт
+this.interval = 2000;       // интервал опроса и пересчета
 const states = 'Отправлен,Проверяется,Подтвержден,Отклонен,Отозван,Архив'.split(',');
 
 class Subscription {
@@ -11,9 +12,8 @@ class Subscription {
     this.accumulation = accumulation;
     // внешние подписчики, могут поместить сюда свои методы для расчёта своих индексов
     this.listeners = [];
-    this._reflect = require('./reflect')($p, log, accumulation)
-    // интервал опроса и пересчета
-    this.interval = 60000;
+    this._reflect = require('./reflect')($p, log, accumulation);
+
     // указатель на текущий таймер
     this.timer = 0;
     // базы всех отделов
@@ -53,14 +53,16 @@ class Subscription {
   }
 
   async subscribe() {
-    const {$p: {cat: {abonents, branches}, job_prm: {server}}, accumulation, dbs} = this;
+    const {$p: {cat: {abonents, branches}, job_prm: {server}}, accumulation, dbs, interval, timer} = this;
     const year = new Date().getFullYear();
+    clearTimeout(timer);
+
     for(const branch of branches) {
       if(branch.use &&
-          server.abonents.includes(branch.owner.id) &&
-          (!server.branches.length || server.branches.includes(branch.suffix))) {
+        server.abonents.includes(branch.owner.id) &&
+        (!server.branches.length || server.branches.includes(branch.suffix))) {
         const db = branch.db('doc');
-        dbs.push(db);
+        !dbs.includes(db) && dbs.push(db);
         const since = await accumulation.get_param(`b|${branch.ref}`) || '';
         try{
           await this.read({db, since, branch, abonent: branch.owner, year});
@@ -74,7 +76,7 @@ class Subscription {
       if(server.abonents.includes(abonent.id)) {
         const {job_prm: {server}, adapters: {pouch}} = this.$p;
         const db = server.single_db ? pouch.remote.doc : abonent.db('doc');
-        dbs.push(db);
+        !dbs.includes(db) && dbs.push(db);
         const since = await accumulation.get_param(`a|${abonent.ref}`);
         try{
           await this.read({db, since, branch: branches.get(), abonent, year});
@@ -84,6 +86,8 @@ class Subscription {
         }
       }
     }
+
+    setTimeout(this.subscribe.bind(this), interval);
     return Promise.resolve(this);
   }
 }
