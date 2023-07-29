@@ -8,7 +8,7 @@ module.exports = function nsql(doc, glrt) {
       for (let specimen = 1; specimen <= row.quantity; specimen++) {
         for (const srow of characteristic.specification) {
           for (const prow of srow.nom.demand) {
-            if (prow.kind.is('region') && srow.elm > 0) {
+            if (srow.elm > 0 && prow.kind.applying.is('region')) {
               const crow = characteristic.constructions.find({elm: srow.elm});
               if(crow.elm_type.is('glass')) {
                 characteristic.glass_specification.find_rows({elm: srow.elm})
