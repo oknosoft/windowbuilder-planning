@@ -26,7 +26,6 @@
     "ean13-lib": "^0.0.5"
   },
   "devDependencies": {},
-  "main": "server/index.js",
   "packageManager": "^yarn@1.22.19",
   "files": [
     "server/**",
