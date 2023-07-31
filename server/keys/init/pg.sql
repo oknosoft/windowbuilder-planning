@@ -5,7 +5,7 @@
 -- Dumped from database version 14.8
 -- Dumped by pg_dump version 14.8
 
--- Started on 2023-07-05 13:44:29 MSK
+-- Started on 2023-07-31 22:40:11 MSK
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -28,7 +28,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA public;
 
 
 --
--- TOC entry 3374 (class 0 OID 0)
+-- TOC entry 3387 (class 0 OID 0)
 -- Dependencies: 2
 -- Name: EXTENSION "uuid-ossp"; Type: COMMENT; Schema: -; Owner:
 --
@@ -37,7 +37,7 @@ COMMENT ON EXTENSION "uuid-ossp" IS 'generate universally unique identifiers (UU
 
 
 --
--- TOC entry 862 (class 1247 OID 3176553)
+-- TOC entry 863 (class 1247 OID 3176553)
 -- Name: key_type; Type: TYPE; Schema: public; Owner: postgres
 --
 
@@ -57,7 +57,7 @@ CREATE TYPE public.key_type AS ENUM (
 ALTER TYPE public.key_type OWNER TO postgres;
 
 --
--- TOC entry 868 (class 1247 OID 3698031)
+-- TOC entry 869 (class 1247 OID 3698031)
 -- Name: prod_row; Type: TYPE; Schema: public; Owner: postgres
 --
 
@@ -70,7 +70,7 @@ CREATE TYPE public.prod_row AS (
 ALTER TYPE public.prod_row OWNER TO postgres;
 
 --
--- TOC entry 865 (class 1247 OID 3556323)
+-- TOC entry 866 (class 1247 OID 3556323)
 -- Name: qinfo_type; Type: TYPE; Schema: public; Owner: postgres
 --
 
@@ -94,7 +94,31 @@ CREATE TYPE public.qinfo_type AS (
 ALTER TYPE public.qinfo_type OWNER TO postgres;
 
 --
--- TOC entry 239 (class 1255 OID 3558639)
+-- TOC entry 872 (class 1247 OID 5825217)
+-- Name: refs; Type: TYPE; Schema: public; Owner: postgres
+--
+
+CREATE TYPE public.refs AS ENUM (
+    'doc.calc_order',
+    'doc.planning_event',
+    'doc.work_centers_task',
+    'doc.work_centers_performance',
+    'doc.purchase_order',
+    'doc.debit_cash_order',
+    'doc.credit_cash_order',
+    'doc.credit_card_order',
+    'doc.debit_bank_order',
+    'doc.credit_bank_order',
+    'doc.selling',
+    'doc.purchase',
+    'doc.nom_prices_setup'
+);
+
+
+ALTER TYPE public.refs OWNER TO postgres;
+
+--
+-- TOC entry 240 (class 1255 OID 3558639)
 -- Name: qinfo(character varying); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
@@ -160,6 +184,107 @@ ALTER FUNCTION public.qinfo(code character varying) OWNER TO postgres;
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
+
+--
+-- TOC entry 218 (class 1259 OID 6006161)
+-- Name: areg_needs; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.areg_needs (
+    register uuid NOT NULL,
+    register_type public.refs NOT NULL,
+    row_num bigint NOT NULL,
+    period timestamp without time zone,
+    nom uuid,
+    characteristic uuid,
+    stage uuid,
+    planing_key uuid,
+    quantity numeric(15,3) DEFAULT 0
+);
+
+
+ALTER TABLE public.areg_needs OWNER TO postgres;
+
+--
+-- TOC entry 3388 (class 0 OID 0)
+-- Dependencies: 218
+-- Name: COLUMN areg_needs.register; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.areg_needs.register IS 'Регистратор';
+
+
+--
+-- TOC entry 3389 (class 0 OID 0)
+-- Dependencies: 218
+-- Name: COLUMN areg_needs.register_type; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.areg_needs.register_type IS 'Тип регистратора';
+
+
+--
+-- TOC entry 3390 (class 0 OID 0)
+-- Dependencies: 218
+-- Name: COLUMN areg_needs.row_num; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.areg_needs.row_num IS 'Номер строки';
+
+
+--
+-- TOC entry 3391 (class 0 OID 0)
+-- Dependencies: 218
+-- Name: COLUMN areg_needs.period; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.areg_needs.period IS 'Период';
+
+
+--
+-- TOC entry 3392 (class 0 OID 0)
+-- Dependencies: 218
+-- Name: COLUMN areg_needs.nom; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.areg_needs.nom IS 'Номенклатура';
+
+
+--
+-- TOC entry 3393 (class 0 OID 0)
+-- Dependencies: 218
+-- Name: COLUMN areg_needs.characteristic; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.areg_needs.characteristic IS 'Характеристика';
+
+
+--
+-- TOC entry 3394 (class 0 OID 0)
+-- Dependencies: 218
+-- Name: COLUMN areg_needs.stage; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.areg_needs.stage IS 'Этап производства';
+
+
+--
+-- TOC entry 3395 (class 0 OID 0)
+-- Dependencies: 218
+-- Name: COLUMN areg_needs.planing_key; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.areg_needs.planing_key IS 'Ключ планирования';
+
+
+--
+-- TOC entry 3396 (class 0 OID 0)
+-- Dependencies: 218
+-- Name: COLUMN areg_needs.quantity; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.areg_needs.quantity IS 'Количество';
+
 
 --
 -- TOC entry 215 (class 1259 OID 3061481)
@@ -230,7 +355,7 @@ CREATE TABLE public.settings (
 ALTER TABLE public.settings OWNER TO postgres;
 
 --
--- TOC entry 3219 (class 1259 OID 3061357)
+-- TOC entry 3230 (class 1259 OID 3061357)
 -- Name: address; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -238,7 +363,16 @@ CREATE UNIQUE INDEX address ON public.keys USING btree (obj, specimen, elm, regi
 
 
 --
--- TOC entry 3224 (class 2606 OID 2900143)
+-- TOC entry 3241 (class 2606 OID 6006168)
+-- Name: areg_needs calculations_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.areg_needs
+    ADD CONSTRAINT calculations_pkey PRIMARY KEY (register, register_type, row_num);
+
+
+--
+-- TOC entry 3235 (class 2606 OID 2900143)
 -- Name: characteristics characteristics_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -247,7 +381,7 @@ ALTER TABLE ONLY public.characteristics
 
 
 --
--- TOC entry 3222 (class 2606 OID 2899811)
+-- TOC entry 3233 (class 2606 OID 2899811)
 -- Name: keys keys_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -256,7 +390,7 @@ ALTER TABLE ONLY public.keys
 
 
 --
--- TOC entry 3228 (class 2606 OID 3061485)
+-- TOC entry 3239 (class 2606 OID 3061485)
 -- Name: calc_orders orders_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -265,7 +399,7 @@ ALTER TABLE ONLY public.calc_orders
 
 
 --
--- TOC entry 3226 (class 2606 OID 2900720)
+-- TOC entry 3237 (class 2606 OID 2900720)
 -- Name: settings settings_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -274,7 +408,7 @@ ALTER TABLE ONLY public.settings
 
 
 --
--- TOC entry 3220 (class 1259 OID 3494689)
+-- TOC entry 3231 (class 1259 OID 3494689)
 -- Name: barcode; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -282,7 +416,7 @@ CREATE INDEX barcode ON public.keys USING btree (barcode);
 
 
 --
--- TOC entry 3229 (class 2606 OID 3061494)
+-- TOC entry 3242 (class 2606 OID 3061494)
 -- Name: characteristics order; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -290,8 +424,9 @@ ALTER TABLE ONLY public.characteristics
     ADD CONSTRAINT "order" FOREIGN KEY (calc_order) REFERENCES public.calc_orders(ref) NOT VALID;
 
 
--- Completed on 2023-07-05 13:44:29 MSK
+-- Completed on 2023-07-31 22:40:11 MSK
 
 --
 -- PostgreSQL database dump complete
 --
+

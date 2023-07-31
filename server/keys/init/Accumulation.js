@@ -62,7 +62,7 @@ class Accumulation extends classes.MetaEventEmitter {
    */
   db_metadata() {
     const {client} = this;
-    const raw = require('fs').readFileSync(require.resolve('./pg.sql'), 'utf8').split('\n');
+    const raw = require('node:fs').readFileSync(require.resolve('./pg.sql'), 'utf8').split('\n');
     let sql = '';
     for(const row of raw) {
       sql += '\n';
