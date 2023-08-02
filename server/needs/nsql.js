@@ -12,10 +12,10 @@ module.exports = function nsql(doc, glrt) {
               const crow = characteristic.constructions.find({elm: srow.elm});
               if(crow.elm_type.is('glass')) {
                 characteristic.glass_specification.find_rows({elm: srow.elm})
-                  .forEach(({_row: {inset, region}}, region) => {
+                  .forEach(({_row: {inset, region}}, inner) => {
                     if(glrt.includes(inset.insert_glass_type)) {
-                      region++;
-                      keys.push({obj: row.characteristic.ref, specimen, elm: srow.elm, region});
+                      inner++;
+                      keys.push({obj: row.characteristic.ref, specimen, elm: srow.elm, region: inner});
                     }
                   });
               }
@@ -24,6 +24,7 @@ module.exports = function nsql(doc, glrt) {
           }
         }
       }
+      values.length = 0;
       values.push(`('${doc.ref}', 'doc.calc_order', ${row.row}, ${Math.random()})`);
     }
   }
