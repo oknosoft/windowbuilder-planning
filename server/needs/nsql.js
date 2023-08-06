@@ -1,5 +1,5 @@
 
-module.exports = function nsql(doc, glrt) {
+module.exports = async function nsql(doc, {job_prm, utils}) {
   const values = [];
   const keys = [];
   for (const row of doc.production) {
@@ -7,26 +7,38 @@ module.exports = function nsql(doc, glrt) {
       const {characteristic} = row;
       for (let specimen = 1; specimen <= row.quantity; specimen++) {
         for (const srow of characteristic.specification) {
-          for (const prow of srow.nom.demand) {
-            if (srow.elm > 0 && prow.kind.applying.is('region')) {
-              const crow = characteristic.constructions.find({elm: srow.elm});
-              if(crow.elm_type.is('glass')) {
-                characteristic.glass_specification.find_rows({elm: srow.elm})
-                  .forEach(({_row: {inset, region}}, inner) => {
-                    if(glrt.includes(inset.insert_glass_type)) {
-                      inner++;
-                      keys.push({obj: row.characteristic.ref, specimen, elm: srow.elm, region: inner});
-                    }
-                  });
-              }
-
+          if(!srow.stage.empty()) {
+            const arow = {
+              obj: characteristic.ref,
+              specimen,
+              elm: srow.elm,
+              region: typeof srow.specify === 'number' ? srow.specify : 0,
+              nom: srow.nom,
+              characteristic: srow.characteristic,
+              stage: srow.stage,
+              quantity: srow.totqty1,
+            }
+            values.push(arow);
+            if(!keys.find((key) =>
+              key.obj === arow.obj && key.specimen === specimen && key.elm === srow.elm && key.region === arow.region)) {
+              keys.push({obj: arow.obj, specimen, elm: srow.elm, region: arow.region});
             }
           }
         }
       }
-      values.length = 0;
-      values.push(`('${doc.ref}', 'doc.calc_order', ${row.row}, ${Math.random()})`);
     }
   }
-  return `INSERT INTO areg_needs (register, register_type, row_num, quantity) VALUES ${values.join(',\n')}`;
+  await job_prm.planning_keys(keys);
+  for(const arow of values) {
+    const krow = keys.find((key) =>
+      key.obj === arow.obj && key.specimen === arow.specimen && key.elm === arow.elm && key.region === arow.region);
+    if(krow) {
+      arow.planing_key = krow.ref;
+    }
+  }
+  const period = job_prm.$p.utils.moment().format('YYYY-MM-DD HH:mm:ss');
+  const svalues = values.map((v, index) => `('${doc.ref}', 'doc.calc_order', ${index + 1}, '${period
+  }', '${v.nom.valueOf()}', '${v.characteristic.valueOf()}', '${v.stage.valueOf()}', '${v.planing_key}', ${v.quantity})`);
+  return `INSERT INTO areg_needs (register, register_type, row_num, period, nom, characteristic, stage, planing_key, quantity)
+VALUES ${svalues.join(',\n')}`;
 };
