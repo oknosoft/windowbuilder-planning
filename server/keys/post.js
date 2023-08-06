@@ -1,4 +1,7 @@
 
+const { hrtime } = require('node:process');
+const NS_PER_SEC = 1e9;
+
 /**
  * Корневой обработчик post-запросов
  * @param {MetaEngine} $p
@@ -7,6 +10,8 @@
  * @return Function
  */
 module.exports = function ($p, log, acc) {
+
+  const {end: {end500, end404}, getBody} = $p.utils;
 
   /**
    *
@@ -39,6 +44,29 @@ select ${tname}.*, keys.barcode, keys.ref from ${tname} inner join keys on
   $p.job_prm.planning_keys = keys;
 
   return async (req, res) => {
+    try{
+      let body = JSON.parse(await getBody(req));
+      if(Array.isArray(body?.rows)) {
+        body = body.rows;
+      }
+      const {hrtime: start, parsed: {paths, path}} = req;
+      let data;
+      switch (paths[3]) {
+        case 'keys':
+        case 'rows':
+          data = {rows: await keys(body)};
+          const diff = hrtime(start);
+          data.took = `${((diff[0] * NS_PER_SEC + diff[1])/1e6).round(1)} ms`;
+          log(`keys/rows took=${data.took}`);
+          break;
 
+        default:
+          return end404(res, path);
+      }
+      res.end(JSON.stringify(data, null, '\t'));
+    }
+    catch (err) {
+      end500({req, res, err, log});
+    }
   };
 }
