@@ -4,22 +4,14 @@ module.exports = function planning_needs($p, log, route) {
   if(process.env.PLANNING_NEEDS) {
     log('planning_needs started');
 
-    const nsql = require('./nsql');
+    const glob = {};
+    require('./listener')($p, log, glob);
 
-    $p.md.once('planning_keys', ({subscription, accumulation}) => {
-      const {client} = accumulation;
-      subscription.listeners.push(async function reflect({db, results, docs, branch, abonent, year}) {
-        for(const {doc, prod} of docs) {
-          // при любом изменении документа, удаляем старые записи
-          await client.query(`DELETE FROM areg_needs where register = $1 and register_type = 'doc.calc_order'`, [doc.ref]);
-          if(doc.posted) {
-            // если документ проведён, добавляем новые
-            const sql = await nsql(doc, $p);
-            await client.query(sql);
-          }
-        }
-      });
-    });
+    const get = require('./get')($p, log, glob);
+
+    route.needs = function needsHandler(req, res) {
+      return req.method === 'GET' ? get(req, res) : get(req, res);
+    };
   }
   else {
     log('planning_needs skipping');

@@ -36,9 +36,10 @@ module.exports = async function nsql(doc, {job_prm, utils}) {
       arow.planing_key = krow.ref;
     }
   }
-  const period = job_prm.$p.utils.moment().format('YYYY-MM-DD HH:mm:ss');
-  const svalues = values.map((v, index) => `('${doc.ref}', 'doc.calc_order', ${index + 1}, '${period
-  }', '${v.nom.valueOf()}', '${v.characteristic.valueOf()}', '${v.stage.valueOf()}', '${v.planing_key}', ${v.quantity})`);
-  return `INSERT INTO areg_needs (register, register_type, row_num, period, nom, characteristic, stage, planing_key, quantity)
+  const period = utils.moment(doc.date).format('YYYY-MM-DD HH:mm:ss');
+  const {ref} = doc;
+  const svalues = values.map((v, index) => `('${ref}', 'doc.calc_order', ${index + 1}, '${period
+  }', 1, '${ref}', '${v.nom.valueOf()}', '${v.characteristic.valueOf()}', '${v.stage.valueOf()}', '${v.planing_key}', ${v.quantity})`);
+  return `INSERT INTO areg_needs (register, register_type, row_num, period, sign, calc_order, nom, characteristic, stage, planing_key, quantity)
 VALUES ${svalues.join(',\n')}`;
 };
