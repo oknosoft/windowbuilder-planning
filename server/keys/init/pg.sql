@@ -127,9 +127,15 @@ CREATE TYPE public.refs AS ENUM (
 -- Name: qinfo(character varying); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.qinfo(code character varying) RETURNS public.qinfo_type
-    LANGUAGE plpgsql
-    AS $$
+-- FUNCTION: public.qinfo(character varying)
+
+-- DROP FUNCTION IF EXISTS public.qinfo(character varying);
+
+CREATE OR REPLACE FUNCTION public.qinfo(code character varying) RETURNS qinfo_type
+    LANGUAGE 'plpgsql'
+    COST 100
+    VOLATILE PARALLEL UNSAFE
+AS $BODY$
 declare
 	tmp qinfo_type;
 	keys_row keys%ROWTYPE;
@@ -181,7 +187,11 @@ begin
   end if;
   return tmp;
 end
-$$;
+$BODY$;
+
+ALTER FUNCTION public.qinfo(character varying)
+    OWNER TO postgres;
+
 
 
 SET default_table_access_method = heap;
