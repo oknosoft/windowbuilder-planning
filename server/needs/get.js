@@ -39,7 +39,7 @@ function get($p, log, glob) {
 
 async function totals({query, utils, client}) {
   let {calc_order: ref, detail} = query;
-  if(!detail.startsWith(',')) {
+  if(!detail?.startsWith(',')) {
     detail = `, ${detail}`;
   }
   let sql = `SELECT nom, characteristic%1, sum(sign * quantity) quantity FROM public.areg_needs
