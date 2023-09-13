@@ -201,7 +201,7 @@ module.exports = function ($p, log, acc) {
       const {_id, _rev, ...attr} = result.doc;
       attr.ref = _id.substring(15);
       if(attr.ref.length !== 36) {
-        return log(new Error(`Ошибка формата uid\nobj=${attr.ref
+        log(new Error(`Ошибка формата uid\nobj=${attr.ref
         }\nbranch='${branch.suffix}' ${branch.valueOf()
         }\nabonent=${abonent.id}`));
         continue;
