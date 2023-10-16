@@ -1,6 +1,7 @@
 
-const limit = 120;  // объектов за такт
-this.interval = 2000;       // интервал опроса и пересчета
+const limit = 100;        // объектов за такт
+const interval = 2000;    // интервал переподключения при ошибке
+const heartbeat = 20000;  // параметр http для оживления соединения
 const states = 'Отправлен,Проверяется,Подтвержден,Отклонен,Отозван,Архив'.split(',');
 
 class Subscription {
@@ -13,13 +14,6 @@ class Subscription {
     // внешние подписчики, могут поместить сюда свои методы для расчёта своих индексов
     this.listeners = [];
     this._reflect = require('./reflect')($p, log, accumulation);
-
-    // указатель на текущий таймер
-    this.timer = 0;
-    // базы всех отделов
-    this.dbs = [];
-    // новые базы, для которых seq не задан
-    this.ndbs = [];
   }
 
   async reflect(attr) {
@@ -36,58 +30,47 @@ class Subscription {
     this.accumulation.set_param(prm, last_seq);
   }
 
-  read({db, since = '', branch, abonent, year}) {
-    return db.changes({
-      since,
-      limit,
+  async reconnect(abonent) {
+    const {$p: {cat: {branches}, job_prm: {server}, adapters: {pouch}}, accumulation, log} = this;
+    const branch = branches.get()
+    const db = server.single_db ? pouch.remote.doc : abonent.db('doc');
+    const year = new Date().getFullYear();
+    const conf = {
       include_docs: true,
+      heartbeat,
+      limit,
+      since: await accumulation.get_param(`a|${abonent.ref}`)
+        .catch(() => (''))
+        .then((since) => since),
       selector: {class_name: 'doc.calc_order', obj_delivery_state: {$in: states}}
-    })
-      .then(({results, last_seq}) => {
-        return results.length ?
-          this.reflect({db, results, last_seq, branch, abonent, year})
-            .then(() => this.read({db, since: last_seq, branch, abonent, year}))
-          :
-          last_seq;
+    };
+
+    return db.changes(conf)
+      .then(async ({results, last_seq}) => {
+        if(results.length) {
+          await this.reflect({db, results, last_seq, branch, abonent, year});
+          return await this.reconnect(abonent);
+        }
+        conf.live = true;
+        conf.batch_size = limit;
+        delete conf.limit;
+        log(`planning_keys reconnect zone=${abonent.id} since=${conf.since.split('-')[0]}`);
+        return db.changes(conf)
+          .on('change', async ({seq, doc}) => {
+            await this.reflect({db, last_seq: seq, results: [doc], branch, abonent, year});
+          })
+          .on('error', (error) => {
+            log(error);
+            setTimeout(this.reconnect.bind(this, abonent), interval);
+          });
       });
   }
 
   async subscribe() {
-    const {$p: {cat: {abonents, branches}, job_prm: {server}}, accumulation, dbs, interval, timer} = this;
-    const year = new Date().getFullYear();
-    clearTimeout(timer);
-
-    for(const branch of branches) {
-      if(branch.use &&
-        server.abonents.includes(branch.owner.id) &&
-        (!server.branches.length || server.branches.includes(branch.suffix))) {
-        const db = branch.db('doc');
-        !dbs.includes(db) && dbs.push(db);
-        const since = await accumulation.get_param(`b|${branch.ref}`) || '';
-        try{
-          await this.read({db, since, branch, abonent: branch.owner, year});
-        }
-        catch (err) {
-          this.log(err);
-        }
-      }
+    const {cat: {abonents}, job_prm: {server, zone}} = this.$p;
+    for(const id of server.single_db ? [zone] : server.abonents) {
+      await this.reconnect(abonents.by_id(id));
     }
-    for(const abonent of abonents) {
-      if(server.abonents.includes(abonent.id)) {
-        const {job_prm: {server}, adapters: {pouch}} = this.$p;
-        const db = server.single_db ? pouch.remote.doc : abonent.db('doc');
-        !dbs.includes(db) && dbs.push(db);
-        const since = await accumulation.get_param(`a|${abonent.ref}`);
-        try{
-          await this.read({db, since, branch: branches.get(), abonent, year});
-        }
-        catch (err) {
-          this.log(err);
-        }
-      }
-    }
-
-    setTimeout(this.subscribe.bind(this), interval);
     return Promise.resolve(this);
   }
 }

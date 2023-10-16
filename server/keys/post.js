@@ -14,11 +14,47 @@ module.exports = function ($p, log, acc) {
   const {end: {end500, end404}, getBody} = $p.utils;
 
   /**
-   *
+   * Описание ключей по массиву идентификаторов или баркодов
+   * @param {Array.<Object>} keys
+   * @return {Promise<Array>}
+   */
+  async function by_ids(keys) {
+    let sql = `select keys.ref,
+keys.barcode,
+calc_orders.ref calc_order,
+characteristics.ref characteristic,
+keys.specimen,
+keys.elm,
+keys.region,
+keys.type,
+case when characteristics.ref is null then calc_orders.number_doc else characteristics.name end presentation,
+
+calc_orders.abonent,
+calc_orders.year,
+calc_orders.branch
+from keys
+left outer join characteristics on characteristics.ref = keys.obj
+left outer join calc_orders on calc_orders.ref = characteristics.calc_order or calc_orders.ref = keys.obj
+`;
+    if(keys.every((v) => v.length === 36)) {
+      sql += `where keys.ref in (${keys.map(v => `'${v}'`).join(', ')})`;
+    }
+    else {
+      sql += `where keys.barcode in (${keys.map(v => `'${v}'`).join(', ')})`;
+    }
+    const pq = await acc.client.query(sql);
+    return pq.rows;
+  }
+
+  /**
+   * Описание ключей по массиву свойств
    * @param {Array.<Object>} keys
    * @return {Promise<Array>}
    */
   async function keys(keys) {
+    if(keys.some((v) => typeof v === 'string')) {
+      return by_ids(keys);
+    }
     const tname = `k${Math.floor(Math.random() * 100000)}`;
     const values = keys.map(v => `('${v.obj}', ${v.specimen}, ${v.elm}, ${v.region})`);
     const sql = `create temp table ${tname} of keys_type ON COMMIT DROP;
@@ -41,6 +77,7 @@ select ${tname}.*, keys.barcode, keys.ref from ${tname} inner join keys on
     }
     return keys;
   }
+
   $p.job_prm.planning_keys = keys;
 
   return async (req, res) => {
