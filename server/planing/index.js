@@ -9,3 +9,23 @@ module.exports = function planning($p, log) {
   }
 
 }
+
+module.exports = function planning($p, log, route) {
+
+  if(process.env.PLANNING_DATES) {
+    log('planning_dates started');
+
+    const glob = {};
+    require('./listener')($p, log, glob);
+
+    const get = require('./get')($p, log, glob);
+
+    route.needs = function needsHandler(req, res) {
+      return req.method === 'GET' ? get(req, res) : get(req, res);
+    };
+  }
+  else {
+    log('planning_dates skipping');
+  }
+
+}

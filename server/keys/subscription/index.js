@@ -3,6 +3,11 @@ const limit = 100;        // объектов за такт
 const interval = 2000;    // интервал переподключения при ошибке
 const heartbeat = 20000;  // параметр http для оживления соединения
 const states = 'Отправлен,Проверяется,Подтвержден,Отклонен,Отозван,Архив'.split(',');
+const class_names = [
+  'doc.work_centers_performance',
+  'doc.work_centers_task',
+  'doc.purchase_order'
+];
 
 class Subscription {
 
@@ -42,7 +47,15 @@ class Subscription {
       since: await accumulation.get_param(`a|${abonent.ref}`)
         .catch(() => (''))
         .then((since) => since),
-      selector: {class_name: 'doc.calc_order', obj_delivery_state: {$in: states}}
+      selector: {
+        $or: [
+          {class_name: {$in: class_names}},
+          {
+            class_name: 'doc.calc_order',
+            obj_delivery_state: {$in: states}
+          }
+        ]
+      }
     };
 
     return db.changes(conf)
@@ -57,7 +70,7 @@ class Subscription {
         log(`planning_keys reconnect zone=${abonent.id} since=${conf.since.split('-')[0]}`);
         return db.changes(conf)
           .on('change', async ({seq, doc}) => {
-            await this.reflect({db, last_seq: seq, results: [doc], branch, abonent, year});
+            await this.reflect({db, last_seq: seq, results: [{doc}], branch, abonent, year});
           })
           .on('error', (error) => {
             log(error);

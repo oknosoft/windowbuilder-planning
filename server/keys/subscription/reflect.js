@@ -10,7 +10,12 @@ function findKey(rows, specimen, elm=0, region=0) {
 const keysSQL = 'INSERT INTO keys (obj, specimen, elm, region, barcode, type) VALUES ($1, $2, $3, $4, $5, $6);';
 
 module.exports = function ($p, log, acc) {
-  const {utils: {sleep, blank}, cat: {branches}, doc: {calc_order}, enm: {elm_types, inserts_glass_types}} = $p;
+  const {
+    utils: {sleep, blank},
+    cat: {branches},
+    doc: {calc_order, work_centers_performance, work_centers_task, purchase_order},
+    enm: {elm_types, inserts_glass_types}
+  } = $p;
   const glrt = require('./glrt')($p);
 
 
@@ -198,41 +203,55 @@ module.exports = function ($p, log, acc) {
     await sleep(2);
     const docs = [];
     for(const result of results) {
-      const {_id, _rev, ...attr} = result.doc;
-      attr.ref = _id.substring(15);
+      const {_id, _rev, class_name, ...attr} = result.doc;
+      attr.ref = _id.substring(class_name.length + 1);
       if(attr.ref.length !== 36) {
-        return log(new Error(`Ошибка формата uid\nobj=${attr.ref
+        return log(new Error(`Ошибка формата uid\nobj=${_id
         }\nbranch='${branch.suffix}' ${branch.valueOf()
         }\nabonent=${abonent.id}`));
         continue;
       }
-      const doc = calc_order.create(attr, false, true);
-      const prod = await doc.load_production(true, db);
-      docs.push({doc, prod});
-      // запись в таблице calc_orders
-      await order({doc, branch, abonent, year, prod});
-      // запись в таблице keys документа Расчёт
-      await keys({doc, branch, abonent, year});
+      if(class_name === 'doc.calc_order') {
+        const doc = calc_order.create(attr, false, true);
+        const prod = await doc.load_production(true, db);
+        docs.push({doc, prod});
+        // запись в таблице calc_orders
+        await order({doc, branch, abonent, year, prod});
+        // запись в таблице keys документа Расчёт
+        await keys({doc, branch, abonent, year});
 
-      // ключи продукций и фрагментов продукций, генерируем только для заказов за последние полгода
-      if(doc.date > slice) {
-        for(const row of doc.production) {
-          if(prod.includes(row.characteristic) && row.characteristic.calc_order === doc) {
-            // запись в таблице characteristics
-            try{
-              await cx(row.characteristic);
-            }
-            catch (e) {
-              throw new Error(`${e.message
-              }\nobj=${row.characteristic.valueOf()
-              }\nbranch='${branch.suffix}' ${branch.valueOf()
-              }\nabonent=${abonent.id}`);
-            }
+        // ключи продукций и фрагментов продукций, генерируем только для заказов за последние полгода
+        if(doc.date > slice) {
+          for(const row of doc.production) {
+            if(prod.includes(row.characteristic) && row.characteristic.calc_order === doc) {
+              // запись в таблице characteristics
+              try{
+                await cx(row.characteristic);
+              }
+              catch (e) {
+                throw new Error(`${e.message
+                }\nobj=${row.characteristic.valueOf()
+                }\nbranch='${branch.suffix}' ${branch.valueOf()
+                }\nabonent=${abonent.id}`);
+              }
 
-            // запись в таблице keys ключей продукции
-            await keys({doc, row, branch, abonent, year});
+              // запись в таблице keys ключей продукции
+              await keys({doc, row, branch, abonent, year});
+            }
           }
         }
+      }
+      else if(class_name === 'doc.work_centers_performance') {
+        const doc = work_centers_performance.create(attr, false, true);
+        docs.push({doc, prod: []});
+      }
+      else if(class_name === 'doc.work_centers_task') {
+        const doc = work_centers_task.create(attr, false, true);
+        docs.push({doc, prod: []});
+      }
+      else if(class_name === 'doc.purchase_order') {
+        const doc = purchase_order.create(attr, false, true);
+        docs.push({doc, prod: []});
       }
     }
     const prm = branch.empty() ? `a|${abonent.ref}` : `b|${branch.ref}`;
