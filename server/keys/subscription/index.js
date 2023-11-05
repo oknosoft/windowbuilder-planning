@@ -1,6 +1,6 @@
 
-const limit = 120;  // объектов за такт
-this.interval = 2000;       // интервал опроса и пересчета
+const limit = 120;      // объектов за такт
+const interval = 2000;  // интервал опроса и пересчета
 const states = 'Отправлен,Проверяется,Подтвержден,Отклонен,Отозван,Архив'.split(',');
 
 class Subscription {
@@ -33,7 +33,9 @@ class Subscription {
       }
       doc.unload();
     }
-    this.accumulation.set_param(prm, last_seq);
+    if(last_seq) {
+      await this.accumulation.set_param(prm, last_seq);
+    }
   }
 
   read({db, since = '', branch, abonent, year}) {
@@ -53,7 +55,7 @@ class Subscription {
   }
 
   async subscribe() {
-    const {$p: {cat: {abonents, branches}, job_prm: {server}}, accumulation, dbs, interval, timer} = this;
+    const {$p: {cat: {abonents, branches}, job_prm: {server}}, accumulation, dbs, timer} = this;
     const year = new Date().getFullYear();
     clearTimeout(timer);
 
@@ -87,8 +89,14 @@ class Subscription {
       }
     }
 
-    setTimeout(this.subscribe.bind(this), interval);
+    this.timer = setTimeout(this.subscribe.bind(this), interval);
     return Promise.resolve(this);
+  }
+
+  direct({abonent, year, branch, ref}) {
+    const db = branch.db('doc');
+    return db.get(`doc.calc_order|${ref}`)
+      .then((doc) => this.reflect({db, results: [{doc}], branch, abonent, year, direct: true}));
   }
 }
 

@@ -14,20 +14,20 @@ function get($p, log, acc) {
 
   return async (req, res) => {
     try{
-      let query;
-      const {hrtime, parsed: {paths}} = req;
+      let result;
+      const {hrtime, query, parsed: {paths}} = req;
       const code = paths[3];
       switch (code) {
         case 'order':
-          query = await order(paths[4], acc, hrtime);
+          result = await order(paths[4], acc, hrtime, query, $p);
           break;
         case 'product':
-          query = await product(paths[4], acc, hrtime);
+          result = await product(paths[4], acc, hrtime);
           break;
         default:
-          query = await info(code, acc, hrtime);
+          result = await info(code, acc, hrtime);
       }
-      res.end(JSON.stringify(query, null, '\t'));
+      res.end(JSON.stringify(result, null, '\t'));
     }
     catch (err) {
       end500({req, res, err, log});
@@ -64,10 +64,21 @@ async function product(ref, acc, start) {
   return fin(pq, start, ref);
 }
 
-async function order(ref, acc, start) {
+async function order(ref, acc, start, query, $p) {
   refLength(ref);
-  const pq = await acc.client.query(
-    `select calc_orders.*, keys.ref as qr, keys.barcode from calc_orders inner join keys on keys.obj=calc_orders.ref where calc_orders.ref=$1`, [ref]);
+  const byOrder = `select calc_orders.*, keys.ref as qr, keys.barcode from calc_orders inner join keys on keys.obj=calc_orders.ref where calc_orders.ref=$1`;
+  let pq = await acc.client.query(byOrder, [ref]);
+  const {utils, cat} = $p;
+  if(!pq.rowCount && query.zone && query.branch) {
+    const abonent = utils.is_guid(query.zone) ? cat.abonents.get(query.zone) : cat.abonents.by_id(query.zone);
+    const branch = utils.is_guid(query.branch) ? cat.branches.get(query.branch) : cat.branches.find({suffix: query.branch});
+
+    if(!branch.is_new() && branch.owner === abonent) {
+      const year = parseFloat(query.year) || new Date().getFullYear();
+      await acc.subscription.direct({abonent, year, branch, ref});
+      pq = await acc.client.query(byOrder, [ref]);
+    }
+  }
   return fin(pq, start, ref);
 }
 

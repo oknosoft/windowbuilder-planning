@@ -194,7 +194,7 @@ module.exports = function ($p, log, acc) {
     }
   }
 
-  async function reflect({db, results, last_seq, branch, abonent, year}) {
+  async function reflect({db, results, last_seq, branch, abonent, year, direct}) {
     await sleep(2);
     const docs = [];
     for(const result of results) {
@@ -215,7 +215,7 @@ module.exports = function ($p, log, acc) {
       await keys({doc, branch, abonent, year});
 
       // ключи продукций и фрагментов продукций, генерируем только для заказов за последние полгода
-      if(doc.date > slice) {
+      if(doc.date > slice || direct) {
         for(const row of doc.production) {
           if(prod.includes(row.characteristic) && row.characteristic.calc_order === doc) {
             // запись в таблице characteristics

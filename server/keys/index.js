@@ -6,7 +6,8 @@ module.exports = function planning_keys($p, log, route) {
     log('planning_keys started');
     const accumulation = require('./init')($p, log);
     require('./subscription')($p, log, accumulation)
-      .then(() => {
+      .then((subscription) => {
+        accumulation.subscription = subscription;
         log('planning_keys cycle completed');
       });
 
