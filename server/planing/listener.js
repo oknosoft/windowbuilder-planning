@@ -1,9 +1,10 @@
 
 const performance = require('./documents/performance');
+const calc_order = require('./documents/order');
 
 module.exports = function listener($p, log, glob) {
 
-  const {utils} = $p;
+  const {utils, job_prm, wsql} = $p;
 
   $p.md.once('planning_keys', ({subscription, accumulation}) => {
     const {client} = accumulation;
@@ -15,9 +16,10 @@ module.exports = function listener($p, log, glob) {
         if(doc.posted) {
           switch (doc.class_name) {
             case 'doc.calc_order':
+              await calc_order({doc, client, utils, job_prm, wsql});
               break;
             case 'doc.work_centers_performance':
-              await performance({doc, client, utils});
+              await performance({doc, client, utils, job_prm, wsql});
               break;
             case 'doc.work_centers_task':
               break;

@@ -26,10 +26,7 @@ class Subscription {
     for(const listener of this.listeners) {
       await listener.call(this, {...attr, docs});
     }
-    for(const {doc, prod} of docs) {
-      for(const ox of prod) {
-        ox.unload();
-      }
+    for(const {doc} of docs) {
       doc.unload();
     }
     this.accumulation.set_param(prm, last_seq);
