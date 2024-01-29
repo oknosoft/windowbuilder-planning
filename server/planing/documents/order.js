@@ -4,7 +4,13 @@ module.exports = async function({doc, client, utils, job_prm, wsql}) {
   const register_type = doc.class_name;
   const period = utils.moment(doc.date).format('YYYY-MM-DD HH:mm:ss');
   const demands = await getDemands({doc, job_prm, wsql});
+  if(!demands.length) {
+    return Promise.resolve();
+  }
   const workCenters = getWorkCenters({demands, date: doc.date, utils, wsql});
+  if(!workCenters.size) {
+    return Promise.resolve();
+  }
   const remainders = await getRemainders({workCenters, date: doc.date, client, utils});
 
   const credit = [];
@@ -93,17 +99,19 @@ async function getDemands({doc, job_prm, wsql}) {
       }
     }
   }
-  const tmp = wsql.alasql(`select obj, specimen, elm, region, stage, max(days_from) days_from, max(days_to) days_to, sum(totqty) totqty
+  if(demands.length) {
+    const tmp = wsql.alasql(`select obj, specimen, elm, region, stage, max(days_from) days_from, max(days_to) days_to, sum(totqty) totqty
 from ? group by obj, specimen, elm, region, stage`, [demands]);
-  demands.length = 0;
-  demands.push(...tmp);
-  const keys = wsql.alasql(`select distinct obj, specimen, elm, region from ?`, [demands]);
-  await job_prm.planning_keys(keys);
-  for(const arow of demands) {
-    const krow = keys.find((key) =>
-      key.obj === arow.obj && key.specimen === arow.specimen && key.elm === arow.elm && key.region === arow.region);
-    if(krow) {
-      arow.planing_key = parseInt(krow.barcode);
+    demands.length = 0;
+    demands.push(...tmp);
+    const keys = wsql.alasql(`select distinct obj, specimen, elm, region from ?`, [demands]);
+    await job_prm.planning_keys(keys);
+    for(const arow of demands) {
+      const krow = keys.find((key) =>
+        key.obj === arow.obj && key.specimen === arow.specimen && key.elm === arow.elm && key.region === arow.region);
+      if(krow) {
+        arow.planing_key = parseInt(krow.barcode);
+      }
     }
   }
   return demands;
@@ -142,14 +150,15 @@ async function getRemainders({workCenters, date, client, utils}) {
   const wc = Array.from(workCenters.keys()).map(v => `'${v}'`);
   const from = utils.moment(date).format('YYYY-MM-DD');
   const to = utils.moment(date).add(20, 'days').format('YYYY-MM-DD');
-  const res = await client.query(`select date, shift, work_center, sum(power) power from
+  const sql = `select date, shift, work_center, sum(power) power from
 (SELECT date, shift, work_center, sign * power power FROM public.areg_dates
 where phase = $1
 and date between $2 and $3
 and work_center in (${wc.join(',')})) raw
 group by date, shift, work_center
 having sum(power) > 0
-order by date`, ['plan', from, to]);
+order by date`;
+  const res = await client.query(sql, ['plan', from, to]);
   return res.rows
     .filter(row => row.date >= workCenters.get(row.work_center))
     .map(({date, ...v}) => ({...v, date: utils.moment(date).format('YYYY-MM-DD')}));

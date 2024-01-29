@@ -6,7 +6,7 @@ module.exports = function listener($p, log, glob) {
   $p.md.once('planning_keys', ({subscription, accumulation}) => {
     const {client} = accumulation;
     glob.client = client;
-    subscription.listeners.push(async function reflect({db, results, docs, branch, abonent, year}) {
+    subscription.listeners.push(async function reflectNeeds({db, results, docs, branch, abonent, year}) {
       for(const {doc, prod} of docs) {
         if(doc.class_name === 'doc.calc_order') {
           // при любом изменении документа, удаляем старые записи
