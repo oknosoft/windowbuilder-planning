@@ -37,7 +37,8 @@ CREATE TYPE public.key_type AS ENUM (
     'glass',
     'glunit',
     'layout',
-    'other'
+    'other',
+    'fragment'
 );
 
 
