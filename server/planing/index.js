@@ -1,4 +1,5 @@
 
+/*
 module.exports = function planning($p, log) {
 
   const {get, reminder} = require('./get')($p, log);
@@ -7,8 +8,8 @@ module.exports = function planning($p, log) {
   return async function planningHandler(req, res) {
     return req.method === 'GET' ? get(req, res) : post(req, res);
   }
-
 }
+*/
 
 module.exports = function planning($p, log, route) {
 
@@ -20,7 +21,7 @@ module.exports = function planning($p, log, route) {
 
     const get = require('./get')($p, log, glob);
 
-    route.needs = function needsHandler(req, res) {
+    route.dates = function datesHandler(req, res) {
       return req.method === 'GET' ? get(req, res) : get(req, res);
     };
   }
