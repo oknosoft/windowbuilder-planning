@@ -46,11 +46,12 @@ module.exports = async function({doc, client, utils, job_prm, wsql}) {
   const debitValues = debit.map((v, index) => `('${register}', '${register_type}', ${length + index + 1}, '${period
   }', 'run', '${v.date}', '${v.shift}', '${v.work_center}', ${v.planing_key}, '${v.stage}', '${register}', ${v.power})`);
 
-  const sql = `INSERT INTO areg_dates (register, register_type, row_num, period, sign, date, shift, work_center, power) VALUES ${creditValues.join(',\n')};
+  let sql = creditValues.length ? `INSERT INTO areg_dates (register, register_type, row_num, period, sign, date, shift, work_center, power) VALUES ${creditValues.join(',\n')};\n` : '';
+  if(debitValues.length) {
+    sql += `INSERT INTO areg_dates (register, register_type, row_num, period, phase, date, shift, work_center, planing_key, stage, calc_order, power) VALUES ${debitValues.join(',\n')}`;
+  }
 
-INSERT INTO areg_dates (register, register_type, row_num, period, phase, date, shift, work_center, planing_key, stage, calc_order, power) VALUES ${debitValues.join(',\n')}`;
-
-  return client.query(sql);
+  return sql ? client.query(sql) : Promise.resolve();
 };
 
 /**
