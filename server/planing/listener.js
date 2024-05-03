@@ -1,10 +1,11 @@
 
 const performance = require('./documents/performance');
 const calc_order = require('./documents/order');
+const task = require('./documents/task');
 
 module.exports = function listener($p, log, glob) {
 
-  const {utils, job_prm, wsql} = $p;
+  const {utils, job_prm, wsql, cat} = $p;
 
   $p.md.once('planning_keys', ({subscription, accumulation}) => {
     const {client} = accumulation;
@@ -22,6 +23,7 @@ module.exports = function listener($p, log, glob) {
               await performance({doc, client, utils, job_prm, wsql});
               break;
             case 'doc.work_centers_task':
+              await task({doc, client, utils, job_prm, cat});
               break;
             case 'doc.purchase_order':
               break;

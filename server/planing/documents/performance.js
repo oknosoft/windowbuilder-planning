@@ -17,5 +17,5 @@ module.exports = function({doc, client, utils}) {
   const svalues = values.map((v, index) => `('${register}', '${register_type}', ${index + 1}, '${period
   }', '${v.date}', '${v.shift}', '${v.work_center}', ${v.power})`);
   const sql = `INSERT INTO areg_dates (register, register_type, row_num, period, date, shift, work_center, power) VALUES ${svalues.join(',\n')}`;
-  return client.query(sql);
+  return svalues.length ? client.query(sql) : Promise.resolve();
 }
