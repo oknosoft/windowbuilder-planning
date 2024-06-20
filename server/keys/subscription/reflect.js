@@ -161,6 +161,7 @@ module.exports = function ($p, log, acc) {
                 case elm_types.layout:
                   key_type = 'layout';
                   break;
+                  // TODO: добавить штрихкоды москиток
                 default:
                   key_type = 'profile';
               }

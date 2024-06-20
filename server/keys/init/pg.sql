@@ -2,10 +2,8 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 14.11
--- Dumped by pg_dump version 14.11
-
--- Started on 2024-04-01 14:46:32 MSK
+-- Dumped from database version 14.12
+-- Dumped by pg_dump version 14.12
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -20,7 +18,6 @@ SET escape_string_warning = off;
 SET row_security = off;
 
 --
--- TOC entry 2 (class 3079 OID 2899788)
 -- Name: uuid-ossp; Type: EXTENSION; Schema: -; Owner: -
 --
 
@@ -28,8 +25,6 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA public;
 
 
 --
--- TOC entry 3425 (class 0 OID 0)
--- Dependencies: 2
 -- Name: EXTENSION "uuid-ossp"; Type: COMMENT; Schema: -; Owner: -
 --
 
@@ -37,7 +32,6 @@ COMMENT ON EXTENSION "uuid-ossp" IS 'generate universally unique identifiers (UU
 
 
 --
--- TOC entry 886 (class 1247 OID 3176553)
 -- Name: key_type; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -50,13 +44,14 @@ CREATE TYPE public.key_type AS ENUM (
     'glass',
     'glunit',
     'layout',
+    'mosquito',
+    'set',
+    'fragment',
     'other',
-    'fragment'
 );
 
 
 --
--- TOC entry 868 (class 1247 OID 6144761)
 -- Name: keys_type; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -69,7 +64,6 @@ CREATE TYPE public.keys_type AS (
 
 
 --
--- TOC entry 898 (class 1247 OID 8299268)
 -- Name: phases; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -81,7 +75,6 @@ CREATE TYPE public.phases AS ENUM (
 
 
 --
--- TOC entry 892 (class 1247 OID 3698031)
 -- Name: prod_row; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -92,7 +85,6 @@ CREATE TYPE public.prod_row AS (
 
 
 --
--- TOC entry 889 (class 1247 OID 3556323)
 -- Name: qinfo_type; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -114,7 +106,6 @@ CREATE TYPE public.qinfo_type AS (
 
 
 --
--- TOC entry 895 (class 1247 OID 5825217)
 -- Name: refs; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -131,12 +122,13 @@ CREATE TYPE public.refs AS ENUM (
     'doc.credit_bank_order',
     'doc.selling',
     'doc.purchase',
-    'doc.nom_prices_setup'
+    'doc.nom_prices_setup',
+    'doc.inventory_cuts',
+    'doc.inventory_goods'
 );
 
 
 --
--- TOC entry 260 (class 1255 OID 3558639)
 -- Name: qinfo(character varying); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -200,7 +192,34 @@ $$;
 SET default_table_access_method = heap;
 
 --
--- TOC entry 238 (class 1259 OID 8498928)
+-- Name: areg_cuttings; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.areg_cuttings (
+    register uuid NOT NULL,
+    register_type public.refs NOT NULL,
+    row_num bigint NOT NULL,
+    period timestamp without time zone,
+    sign smallint DEFAULT 1,
+    work_center uuid,
+    nom uuid,
+    characteristic uuid,
+    len numeric(8,2) DEFAULT 0,
+    width numeric(8,2) DEFAULT 0,
+    qty bigint DEFAULT 0,
+    quantity numeric(15,3) DEFAULT 0,
+    amount numeric(15,3) DEFAULT 0
+);
+
+
+--
+-- Name: TABLE areg_cuttings; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.areg_cuttings IS 'Деловая обрезь';
+
+
+--
 -- Name: areg_dates; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -219,127 +238,22 @@ CREATE TABLE public.areg_dates (
     calc_order uuid,
     power numeric(15,3) DEFAULT 0
 );
-
-
---
--- TOC entry 3426 (class 0 OID 0)
--- Dependencies: 238
--- Name: COLUMN areg_dates.register; Type: COMMENT; Schema: public; Owner: -
---
-
 COMMENT ON COLUMN public.areg_dates.register IS 'Регистратор';
-
-
---
--- TOC entry 3427 (class 0 OID 0)
--- Dependencies: 238
--- Name: COLUMN areg_dates.register_type; Type: COMMENT; Schema: public; Owner: -
---
-
 COMMENT ON COLUMN public.areg_dates.register_type IS 'Тип регистратора';
-
-
---
--- TOC entry 3428 (class 0 OID 0)
--- Dependencies: 238
--- Name: COLUMN areg_dates.row_num; Type: COMMENT; Schema: public; Owner: -
---
-
 COMMENT ON COLUMN public.areg_dates.row_num IS 'Номер строки';
-
-
---
--- TOC entry 3429 (class 0 OID 0)
--- Dependencies: 238
--- Name: COLUMN areg_dates.period; Type: COMMENT; Schema: public; Owner: -
---
-
 COMMENT ON COLUMN public.areg_dates.period IS 'Период';
-
-
---
--- TOC entry 3430 (class 0 OID 0)
--- Dependencies: 238
--- Name: COLUMN areg_dates.sign; Type: COMMENT; Schema: public; Owner: -
---
-
 COMMENT ON COLUMN public.areg_dates.sign IS 'Вид движения приход-расход';
-
-
---
--- TOC entry 3431 (class 0 OID 0)
--- Dependencies: 238
--- Name: COLUMN areg_dates.phase; Type: COMMENT; Schema: public; Owner: -
---
-
 COMMENT ON COLUMN public.areg_dates.phase IS 'Фаза планирования';
-
-
---
--- TOC entry 3432 (class 0 OID 0)
--- Dependencies: 238
--- Name: COLUMN areg_dates.date; Type: COMMENT; Schema: public; Owner: -
---
-
 COMMENT ON COLUMN public.areg_dates.date IS 'Дата план или факт';
-
-
---
--- TOC entry 3433 (class 0 OID 0)
--- Dependencies: 238
--- Name: COLUMN areg_dates.shift; Type: COMMENT; Schema: public; Owner: -
---
-
 COMMENT ON COLUMN public.areg_dates.shift IS 'Смена';
-
-
---
--- TOC entry 3434 (class 0 OID 0)
--- Dependencies: 238
--- Name: COLUMN areg_dates.work_center; Type: COMMENT; Schema: public; Owner: -
---
-
 COMMENT ON COLUMN public.areg_dates.work_center IS 'Рабочий центр';
-
-
---
--- TOC entry 3435 (class 0 OID 0)
--- Dependencies: 238
--- Name: COLUMN areg_dates.planing_key; Type: COMMENT; Schema: public; Owner: -
---
-
 COMMENT ON COLUMN public.areg_dates.planing_key IS 'Ключ планирования (barcode)';
-
-
---
--- TOC entry 3436 (class 0 OID 0)
--- Dependencies: 238
--- Name: COLUMN areg_dates.stage; Type: COMMENT; Schema: public; Owner: -
---
-
 COMMENT ON COLUMN public.areg_dates.stage IS 'Этап производства';
-
-
---
--- TOC entry 3437 (class 0 OID 0)
--- Dependencies: 238
--- Name: COLUMN areg_dates.calc_order; Type: COMMENT; Schema: public; Owner: -
---
-
 COMMENT ON COLUMN public.areg_dates.calc_order IS 'Расчёт';
-
-
---
--- TOC entry 3438 (class 0 OID 0)
--- Dependencies: 238
--- Name: COLUMN areg_dates.power; Type: COMMENT; Schema: public; Owner: -
---
-
 COMMENT ON COLUMN public.areg_dates.power IS 'Мощность';
 
 
 --
--- TOC entry 237 (class 1259 OID 6296209)
 -- Name: areg_needs; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -356,91 +270,17 @@ CREATE TABLE public.areg_needs (
     planing_key uuid,
     quantity numeric(15,3) DEFAULT 0
 );
-
-
---
--- TOC entry 3439 (class 0 OID 0)
--- Dependencies: 237
--- Name: COLUMN areg_needs.register; Type: COMMENT; Schema: public; Owner: -
---
-
 COMMENT ON COLUMN public.areg_needs.register IS 'Регистратор';
-
-
---
--- TOC entry 3440 (class 0 OID 0)
--- Dependencies: 237
--- Name: COLUMN areg_needs.register_type; Type: COMMENT; Schema: public; Owner: -
---
-
 COMMENT ON COLUMN public.areg_needs.register_type IS 'Тип регистратора';
-
-
---
--- TOC entry 3441 (class 0 OID 0)
--- Dependencies: 237
--- Name: COLUMN areg_needs.row_num; Type: COMMENT; Schema: public; Owner: -
---
-
 COMMENT ON COLUMN public.areg_needs.row_num IS 'Номер строки';
-
-
---
--- TOC entry 3442 (class 0 OID 0)
--- Dependencies: 237
--- Name: COLUMN areg_needs.period; Type: COMMENT; Schema: public; Owner: -
---
-
 COMMENT ON COLUMN public.areg_needs.period IS 'Период';
-
-
---
--- TOC entry 3443 (class 0 OID 0)
--- Dependencies: 237
--- Name: COLUMN areg_needs.nom; Type: COMMENT; Schema: public; Owner: -
---
-
 COMMENT ON COLUMN public.areg_needs.nom IS 'Номенклатура';
-
-
---
--- TOC entry 3444 (class 0 OID 0)
--- Dependencies: 237
--- Name: COLUMN areg_needs.characteristic; Type: COMMENT; Schema: public; Owner: -
---
-
 COMMENT ON COLUMN public.areg_needs.characteristic IS 'Характеристика';
-
-
---
--- TOC entry 3445 (class 0 OID 0)
--- Dependencies: 237
--- Name: COLUMN areg_needs.stage; Type: COMMENT; Schema: public; Owner: -
---
-
 COMMENT ON COLUMN public.areg_needs.stage IS 'Этап производства';
-
-
---
--- TOC entry 3446 (class 0 OID 0)
--- Dependencies: 237
--- Name: COLUMN areg_needs.planing_key; Type: COMMENT; Schema: public; Owner: -
---
-
 COMMENT ON COLUMN public.areg_needs.planing_key IS 'Ключ планирования';
-
-
---
--- TOC entry 3447 (class 0 OID 0)
--- Dependencies: 237
--- Name: COLUMN areg_needs.quantity; Type: COMMENT; Schema: public; Owner: -
---
-
 COMMENT ON COLUMN public.areg_needs.quantity IS 'Количество';
 
-
 --
--- TOC entry 233 (class 1259 OID 3061481)
 -- Name: calc_orders; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -460,7 +300,6 @@ CREATE TABLE public.calc_orders (
 
 
 --
--- TOC entry 231 (class 1259 OID 2900139)
 -- Name: characteristics; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -473,7 +312,6 @@ CREATE TABLE public.characteristics (
 
 
 --
--- TOC entry 230 (class 1259 OID 2899806)
 -- Name: keys; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -489,7 +327,6 @@ CREATE TABLE public.keys (
 
 
 --
--- TOC entry 232 (class 1259 OID 2900714)
 -- Name: settings; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -500,7 +337,6 @@ CREATE TABLE public.settings (
 
 
 --
--- TOC entry 3266 (class 1259 OID 3061357)
 -- Name: address; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -508,7 +344,14 @@ CREATE UNIQUE INDEX address ON public.keys USING btree (obj, specimen, elm, regi
 
 
 --
--- TOC entry 3279 (class 2606 OID 8498937)
+-- Name: areg_cuttings areg_cuttings_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.areg_cuttings
+    ADD CONSTRAINT areg_cuttings_pkey PRIMARY KEY (register, register_type, row_num);
+
+
+--
 -- Name: areg_dates areg_dates_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -517,7 +360,6 @@ ALTER TABLE ONLY public.areg_dates
 
 
 --
--- TOC entry 3277 (class 2606 OID 6296217)
 -- Name: areg_needs areg_needs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -526,7 +368,13 @@ ALTER TABLE ONLY public.areg_needs
 
 
 --
--- TOC entry 3271 (class 2606 OID 2900143)
+-- Name: phase_date; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX phase_date ON public.areg_dates USING btree (phase, date) WITH (deduplicate_items='true');
+
+
+--
 -- Name: characteristics characteristics_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -535,7 +383,6 @@ ALTER TABLE ONLY public.characteristics
 
 
 --
--- TOC entry 3269 (class 2606 OID 2899811)
 -- Name: keys keys_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -544,7 +391,6 @@ ALTER TABLE ONLY public.keys
 
 
 --
--- TOC entry 3275 (class 2606 OID 3061485)
 -- Name: calc_orders orders_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -553,7 +399,6 @@ ALTER TABLE ONLY public.calc_orders
 
 
 --
--- TOC entry 3273 (class 2606 OID 2900720)
 -- Name: settings settings_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -562,7 +407,6 @@ ALTER TABLE ONLY public.settings
 
 
 --
--- TOC entry 3267 (class 1259 OID 3494689)
 -- Name: barcode; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -570,15 +414,12 @@ CREATE INDEX barcode ON public.keys USING btree (barcode);
 
 
 --
--- TOC entry 3280 (class 2606 OID 3061494)
 -- Name: characteristics order; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.characteristics
     ADD CONSTRAINT "order" FOREIGN KEY (calc_order) REFERENCES public.calc_orders(ref) NOT VALID;
 
-
--- Completed on 2024-04-01 14:46:32 MSK
 
 --
 -- PostgreSQL database dump complete
