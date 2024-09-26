@@ -214,6 +214,7 @@ module.exports = function ($p, log, acc) {
       }
       if(class_name === 'doc.calc_order') {
         const doc = calc_order.create(attr, false, true);
+        doc._obj._rev = _rev;
         const prod = await doc.load_production(true, db);
         docs.push({doc, prod});
         // запись в таблице calc_orders
@@ -244,14 +245,17 @@ module.exports = function ($p, log, acc) {
       }
       else if(class_name === 'doc.work_centers_performance') {
         const doc = work_centers_performance.create(attr, false, true);
+        doc._obj._rev = _rev;
         docs.push({doc, prod: []});
       }
       else if(class_name === 'doc.work_centers_task') {
         const doc = work_centers_task.create(attr, false, true);
+        doc._obj._rev = _rev;
         docs.push({doc, prod: []});
       }
       else if(class_name === 'doc.purchase_order') {
         const doc = purchase_order.create(attr, false, true);
+        doc._obj._rev = _rev;
         docs.push({doc, prod: []});
       }
     }

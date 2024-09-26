@@ -7,7 +7,7 @@ module.exports = function({doc, client, utils}) {
   return doc.load_keys()
     .then(() => {
       for(const {obj, record_kind, phase, date, work_shift, work_center, stage, power} of doc.set) {
-        if(power) {
+        if(power && obj.id) {
           values.push({
             sign: record_kind,
             phase: phase.valueOf(),
