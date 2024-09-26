@@ -47,6 +47,7 @@ CREATE TYPE public.key_type AS ENUM (
     'mosquito',
     'set',
     'fragment',
+    'box',
     'other',
 );
 
