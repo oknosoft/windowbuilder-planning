@@ -27,7 +27,7 @@ class Accumulation extends classes.MetaEventEmitter {
       .then(({rows}) => !rows.length && client.query(`CREATE DATABASE "planning-keys"
     WITH OWNER = postgres
     ENCODING = 'UTF8'
-    LC_COLLATE = 'ru_RU.UTF-8@icu'
+    LC_COLLATE = 'ru_RU.UTF-8'
     LC_CTYPE = 'ru_RU.UTF-8'
     TABLESPACE = pg_default
     CONNECTION LIMIT = -1

@@ -48,7 +48,7 @@ CREATE TYPE public.key_type AS ENUM (
     'set',
     'fragment',
     'box',
-    'other',
+    'other'
 );
 
 
