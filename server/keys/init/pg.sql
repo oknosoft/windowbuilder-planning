@@ -2,8 +2,10 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 14.12
--- Dumped by pg_dump version 14.12
+-- Dumped from database version 14.13
+-- Dumped by pg_dump version 14.13
+
+-- Started on 2024-11-29 23:16:06 MSK
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -18,6 +20,7 @@ SET escape_string_warning = off;
 SET row_security = off;
 
 --
+-- TOC entry 2 (class 3079 OID 3595367)
 -- Name: uuid-ossp; Type: EXTENSION; Schema: -; Owner: -
 --
 
@@ -25,6 +28,8 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA public;
 
 
 --
+-- TOC entry 3442 (class 0 OID 0)
+-- Dependencies: 2
 -- Name: EXTENSION "uuid-ossp"; Type: COMMENT; Schema: -; Owner: -
 --
 
@@ -32,6 +37,7 @@ COMMENT ON EXTENSION "uuid-ossp" IS 'generate universally unique identifiers (UU
 
 
 --
+-- TOC entry 864 (class 1247 OID 3595379)
 -- Name: key_type; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -53,6 +59,7 @@ CREATE TYPE public.key_type AS ENUM (
 
 
 --
+-- TOC entry 867 (class 1247 OID 3595401)
 -- Name: keys_type; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -65,6 +72,7 @@ CREATE TYPE public.keys_type AS (
 
 
 --
+-- TOC entry 870 (class 1247 OID 3595403)
 -- Name: phases; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -76,6 +84,7 @@ CREATE TYPE public.phases AS ENUM (
 
 
 --
+-- TOC entry 873 (class 1247 OID 3595411)
 -- Name: prod_row; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -86,6 +95,7 @@ CREATE TYPE public.prod_row AS (
 
 
 --
+-- TOC entry 876 (class 1247 OID 3595414)
 -- Name: qinfo_type; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -107,6 +117,7 @@ CREATE TYPE public.qinfo_type AS (
 
 
 --
+-- TOC entry 879 (class 1247 OID 3595416)
 -- Name: refs; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -130,12 +141,13 @@ CREATE TYPE public.refs AS ENUM (
 
 
 --
+-- TOC entry 255 (class 1255 OID 3595443)
 -- Name: qinfo(character varying); Type: FUNCTION; Schema: public; Owner: -
 --
 
 CREATE FUNCTION public.qinfo(code character varying) RETURNS public.qinfo_type
     LANGUAGE plpgsql
-    AS $$
+    AS $qinfo$
 declare
 	tmp qinfo_type;
 	keys_row keys%ROWTYPE;
@@ -187,12 +199,36 @@ begin
   end if;
   return tmp;
 end
-$$;
+$qinfo$;
+
+
+--
+-- TOC entry 256 (class 1255 OID 7732744)
+-- Name: register_change(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.register_change() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $register_change$
+    BEGIN
+        --
+        -- INSERT INTO feed(ref) select ref from keys order by barcode;
+        -- для определения типа операции применяется специальная переменная TG_OP.
+        --
+        IF (TG_OP = 'DELETE') THEN
+			INSERT INTO feed(ref) VALUES(OLD.ref);
+        ELSE
+			INSERT INTO feed(ref) VALUES(NEW.ref);
+        END IF;
+        RETURN NULL; -- возвращаемое значение для триггера AFTER игнорируется
+    END;
+$register_change$;
 
 
 SET default_table_access_method = heap;
 
 --
+-- TOC entry 231 (class 1259 OID 7732347)
 -- Name: areg_cuttings; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -207,13 +243,15 @@ CREATE TABLE public.areg_cuttings (
     characteristic uuid,
     len numeric(8,2) DEFAULT 0,
     width numeric(8,2) DEFAULT 0,
-    qty bigint DEFAULT 0,
+    qty integer DEFAULT 0,
     quantity numeric(15,3) DEFAULT 0,
     amount numeric(15,3) DEFAULT 0
 );
 
 
 --
+-- TOC entry 3443 (class 0 OID 0)
+-- Dependencies: 231
 -- Name: TABLE areg_cuttings; Type: COMMENT; Schema: public; Owner: -
 --
 
@@ -221,6 +259,7 @@ COMMENT ON TABLE public.areg_cuttings IS 'Деловая обрезь';
 
 
 --
+-- TOC entry 225 (class 1259 OID 3595444)
 -- Name: areg_dates; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -255,6 +294,7 @@ COMMENT ON COLUMN public.areg_dates.power IS 'Мощность';
 
 
 --
+-- TOC entry 226 (class 1259 OID 3595450)
 -- Name: areg_needs; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -281,7 +321,9 @@ COMMENT ON COLUMN public.areg_needs.stage IS 'Этап производства'
 COMMENT ON COLUMN public.areg_needs.planing_key IS 'Ключ планирования';
 COMMENT ON COLUMN public.areg_needs.quantity IS 'Количество';
 
+
 --
+-- TOC entry 227 (class 1259 OID 3595455)
 -- Name: calc_orders; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -301,6 +343,7 @@ CREATE TABLE public.calc_orders (
 
 
 --
+-- TOC entry 228 (class 1259 OID 3595460)
 -- Name: characteristics; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -313,6 +356,40 @@ CREATE TABLE public.characteristics (
 
 
 --
+-- TOC entry 233 (class 1259 OID 7732738)
+-- Name: feed; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.feed (
+    seq bigint NOT NULL,
+    ref uuid NOT NULL
+);
+
+
+--
+-- TOC entry 232 (class 1259 OID 7732737)
+-- Name: feed_seq_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.feed_seq_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- TOC entry 3466 (class 0 OID 0)
+-- Dependencies: 232
+-- Name: feed_seq_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.feed_seq_seq OWNED BY public.feed.seq;
+
+
+--
+-- TOC entry 229 (class 1259 OID 3595463)
 -- Name: keys; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -328,6 +405,7 @@ CREATE TABLE public.keys (
 
 
 --
+-- TOC entry 230 (class 1259 OID 3595471)
 -- Name: settings; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -338,6 +416,15 @@ CREATE TABLE public.settings (
 
 
 --
+-- TOC entry 3277 (class 2604 OID 7732741)
+-- Name: feed seq; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.feed ALTER COLUMN seq SET DEFAULT nextval('public.feed_seq_seq'::regclass);
+
+
+--
+-- TOC entry 3286 (class 1259 OID 3595476)
 -- Name: address; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -345,6 +432,7 @@ CREATE UNIQUE INDEX address ON public.keys USING btree (obj, specimen, elm, regi
 
 
 --
+-- TOC entry 3293 (class 2606 OID 7732359)
 -- Name: areg_cuttings areg_cuttings_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -353,6 +441,7 @@ ALTER TABLE ONLY public.areg_cuttings
 
 
 --
+-- TOC entry 3279 (class 2606 OID 3595482)
 -- Name: areg_dates areg_dates_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -361,6 +450,7 @@ ALTER TABLE ONLY public.areg_dates
 
 
 --
+-- TOC entry 3281 (class 2606 OID 3595486)
 -- Name: areg_needs areg_needs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -384,6 +474,16 @@ ALTER TABLE ONLY public.characteristics
 
 
 --
+-- TOC entry 3295 (class 2606 OID 7732743)
+-- Name: feed feed_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.feed
+    ADD CONSTRAINT feed_pkey PRIMARY KEY (seq);
+
+
+--
+-- TOC entry 3289 (class 2606 OID 3595490)
 -- Name: keys keys_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -392,6 +492,7 @@ ALTER TABLE ONLY public.keys
 
 
 --
+-- TOC entry 3283 (class 2606 OID 3595492)
 -- Name: calc_orders orders_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -400,6 +501,7 @@ ALTER TABLE ONLY public.calc_orders
 
 
 --
+-- TOC entry 3291 (class 2606 OID 3595494)
 -- Name: settings settings_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -408,6 +510,7 @@ ALTER TABLE ONLY public.settings
 
 
 --
+-- TOC entry 3287 (class 1259 OID 3595495)
 -- Name: barcode; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -415,12 +518,23 @@ CREATE INDEX barcode ON public.keys USING btree (barcode);
 
 
 --
+-- TOC entry 3297 (class 2620 OID 7732745)
+-- Name: keys register_change; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER register_change AFTER INSERT OR DELETE OR UPDATE ON public.keys FOR EACH ROW EXECUTE FUNCTION public.register_change();
+
+
+--
+-- TOC entry 3296 (class 2606 OID 3595496)
 -- Name: characteristics order; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.characteristics
     ADD CONSTRAINT "order" FOREIGN KEY (calc_order) REFERENCES public.calc_orders(ref) NOT VALID;
 
+
+-- Completed on 2024-11-29 23:16:06 MSK
 
 --
 -- PostgreSQL database dump complete

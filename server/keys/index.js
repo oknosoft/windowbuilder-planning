@@ -15,6 +15,10 @@ module.exports = function planning_keys($p, log, route) {
     route.keys = function keysHandler(req, res) {
       return req.method === 'GET' ? get(req, res) : post(req, res);
     };
+    if(!route.pgsql) {
+      route.pgsql = {};
+    }
+    route.pgsql.keys = require('./feed')($p, log, accumulation);
   }
   else {
     log('planning_keys skipping');
