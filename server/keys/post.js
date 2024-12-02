@@ -78,6 +78,19 @@ select ${tname}.*, keys.barcode, keys.ref from ${tname} inner join keys on
     return keys;
   }
 
+  /**
+   * Движения регистратора
+   * @param {Array.<Object>} keys
+   * @return {Promise<Array>}
+   */
+  async function records({register, type}) {
+    const pq = await acc.client.query(
+      `select period, sign, date, phase, shift, work_center, keys.ref obj, stage, calc_order, power from areg_dates
+left outer join keys on areg_dates.planing_key = keys.barcode where register = $1 and register_type = $2`, [register, type]);
+    return pq.rows;
+  }
+
+
   $p.job_prm.planning_keys = keys;
 
   return async (req, res) => {
@@ -87,14 +100,21 @@ select ${tname}.*, keys.barcode, keys.ref from ${tname} inner join keys on
         body = body.rows;
       }
       const {hrtime: start, parsed: {paths, path}} = req;
-      let data;
+      let data, diff;
       switch (paths[3]) {
         case 'keys':
         case 'rows':
           data = {rows: await keys(body)};
-          const diff = hrtime(start);
+          diff = hrtime(start);
           data.took = `${((diff[0] * NS_PER_SEC + diff[1])/1e6).round(1)} ms`;
           log(`keys/rows took=${data.took}`);
+          break;
+
+        case 'records':
+          data = {rows: await records(body)};
+          diff = hrtime(start);
+          data.took = `${((diff[0] * NS_PER_SEC + diff[1])/1e6).round(1)} ms`;
+          log(`keys/records took=${data.took}`);
           break;
 
         default:
