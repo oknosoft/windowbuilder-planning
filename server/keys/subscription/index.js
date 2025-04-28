@@ -1,5 +1,5 @@
 
-const limit = 100;        // объектов за такт
+const limit = 20;         // объектов за такт
 const interval = 2000;    // интервал переподключения при ошибке
 const heartbeat = 20000;  // параметр http для оживления соединения
 const states = 'Отправлен,Проверяется,Подтвержден,Отклонен,Отозван,Архив'.split(',');
@@ -40,7 +40,7 @@ class Subscription {
     const conf = {
       include_docs: true,
       heartbeat,
-      limit,
+      limit: limit * 2,
       since: await accumulation.get_param(`a|${abonent.ref}`)
         .catch(() => (''))
         .then((since) => since),
