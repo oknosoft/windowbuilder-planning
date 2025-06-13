@@ -40,6 +40,7 @@ module.exports = function listener($p, log, glob) {
                 await performance({doc, client, utils, job_prm, wsql});
                 break;
               case 'doc.work_centers_task':
+              case 'doc.planning_event':
                 await task({doc, client, utils, job_prm, cat});
                 break;
               case 'doc.purchase_order':

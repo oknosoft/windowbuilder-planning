@@ -1,4 +1,7 @@
 
+// Проведение задания на производство и события планирования
+// просто, закидываем в регистр табчасть набора
+
 module.exports = function({doc, client, utils}) {
   const values = [];
   const register = doc.ref;

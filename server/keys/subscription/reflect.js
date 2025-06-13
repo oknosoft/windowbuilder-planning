@@ -13,10 +13,22 @@ module.exports = function ($p, log, acc) {
   const {
     utils: {sleep, blank},
     cat: {branches},
-    doc: {calc_order, work_centers_performance, work_centers_task, purchase_order},
+    doc: {calc_order, work_centers_performance, work_centers_task, purchase_order, planning_event},
     enm: {elm_types, inserts_glass_types}
   } = $p;
   const glrt = require('./glrt')($p);
+  const mgrByName = (name) => {
+    switch (name) {
+      case 'doc.work_centers_performance':
+        return work_centers_performance;
+      case 'doc.work_centers_task':
+        return work_centers_task;
+      case 'doc.purchase_order':
+        return purchase_order;
+      case 'doc.planning_event':
+        return planning_event;
+    }
+  };
 
 
   async function datePrefix(date) {
@@ -243,18 +255,9 @@ module.exports = function ($p, log, acc) {
           }
         }
       }
-      else if(class_name === 'doc.work_centers_performance') {
-        const doc = work_centers_performance.create(attr, false, true);
-        doc._obj._rev = _rev;
-        docs.push({doc, prod: []});
-      }
-      else if(class_name === 'doc.work_centers_task') {
-        const doc = work_centers_task.create(attr, false, true);
-        doc._obj._rev = _rev;
-        docs.push({doc, prod: []});
-      }
-      else if(class_name === 'doc.purchase_order') {
-        const doc = purchase_order.create(attr, false, true);
+      else {
+        const mgr = mgrByName(class_name);
+        const doc = mgr.create(attr, false, true);
         doc._obj._rev = _rev;
         docs.push({doc, prod: []});
       }

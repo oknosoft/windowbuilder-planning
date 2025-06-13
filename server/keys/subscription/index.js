@@ -6,7 +6,8 @@ const states = 'Отправлен,Проверяется,Подтвержден
 const class_names = [
   'doc.work_centers_performance',
   'doc.work_centers_task',
-  'doc.purchase_order'
+  'doc.purchase_order',
+  'doc.planning_event',
 ];
 
 class Subscription {
