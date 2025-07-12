@@ -275,6 +275,8 @@ CREATE TABLE public.areg_dates (
     work_center uuid,
     planing_key bigint,
     stage uuid,
+    part uuid,
+    part_type public.refs,
     calc_order uuid,
     power numeric(15,3) DEFAULT 0
 );
@@ -289,6 +291,8 @@ COMMENT ON COLUMN public.areg_dates.shift IS 'Смена';
 COMMENT ON COLUMN public.areg_dates.work_center IS 'Рабочий центр';
 COMMENT ON COLUMN public.areg_dates.planing_key IS 'Ключ планирования (barcode)';
 COMMENT ON COLUMN public.areg_dates.stage IS 'Этап производства';
+COMMENT ON COLUMN public.areg_dates.part IS 'Партия';
+COMMENT ON COLUMN public.areg_dates.part IS 'Тип партии';
 COMMENT ON COLUMN public.areg_dates.calc_order IS 'Расчёт';
 COMMENT ON COLUMN public.areg_dates.power IS 'Мощность';
 
@@ -463,6 +467,12 @@ ALTER TABLE ONLY public.areg_needs
 --
 
 CREATE INDEX phase_date ON public.areg_dates USING btree (phase, date) WITH (deduplicate_items='true');
+
+--
+-- Name: phase_part; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX phase_part ON public.areg_dates USING btree (phase, part) WITH (deduplicate_items='true');
 
 
 --

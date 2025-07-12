@@ -1,4 +1,6 @@
 
+// SELECT * FROM JSON_TABLE ('[{"id": 1}]'::json, '$' COLUMNS (id INT PATH '$.id'))
+
 module.exports = async function({doc, client, utils, job_prm, wsql}) {
   const register = doc.ref;
   const register_type = doc.class_name;
@@ -12,6 +14,7 @@ module.exports = async function({doc, client, utils, job_prm, wsql}) {
     return Promise.resolve();
   }
   const remainders = await getRemainders({workCenters, date: doc.date, client, utils});
+  const closing = await getClosing({workCenters, doc, client, utils})
 
   const credit = [];
   const debit = [];
@@ -44,11 +47,11 @@ module.exports = async function({doc, client, utils, job_prm, wsql}) {
   }', -1, '${v.date}', '${v.shift}', '${v.work_center}', ${v.power})`);
   const {length} = credit;
   const debitValues = debit.map((v, index) => `('${register}', '${register_type}', ${length + index + 1}, '${period
-  }', 'run', '${v.date}', '${v.shift}', '${v.work_center}', ${v.planing_key}, '${v.stage}', '${register}', ${v.power})`);
+  }', 'run', '${v.date}', '${v.shift}', '${v.work_center}', ${v.planing_key}, '${v.stage}', '${register}', '${register_type}', '${register}', ${v.power})`);
 
   let sql = creditValues.length ? `INSERT INTO areg_dates (register, register_type, row_num, period, sign, date, shift, work_center, power) VALUES ${creditValues.join(',\n')};\n` : '';
   if(debitValues.length) {
-    sql += `INSERT INTO areg_dates (register, register_type, row_num, period, phase, date, shift, work_center, planing_key, stage, calc_order, power) VALUES ${debitValues.join(',\n')}`;
+    sql += `INSERT INTO areg_dates (register, register_type, row_num, period, phase, date, shift, work_center, planing_key, stage, part, part_type, calc_order, power) VALUES ${debitValues.join(',\n')}`;
   }
 
   return sql ? client.query(sql) : Promise.resolve();
@@ -153,14 +156,22 @@ async function getRemainders({workCenters, date, client, utils}) {
   const to = utils.moment(date).add(20, 'days').format('YYYY-MM-DD');
   const sql = `select date, shift, work_center, sum(power) power from
 (SELECT date, shift, work_center, sign * power power FROM public.areg_dates
-where phase = $1
-and date between $2 and $3
+where phase = 'plan'
+and date between $1 and $2
 and work_center in (${wc.join(',')})) raw
 group by date, shift, work_center
 having sum(power) > 0
 order by date`;
-  const res = await client.query(sql, ['plan', from, to]);
+  const res = await client.query(sql, [from, to]);
   return res.rows
     .filter(row => row.date >= workCenters.get(row.work_center))
     .map(({date, ...v}) => ({...v, date: utils.moment(date).format('YYYY-MM-DD')}));
+}
+
+async function getClosing({workCenters, doc: {ref, class_name}, client, utils}) {
+  const wc = Array.from(workCenters.keys()).map(v => `'${v}'`);
+  const sql = `SELECT * FROM public.areg_dates
+where phase = 'plan' and part = '${ref}' and part_type = '${class_name}' and work_center in (${wc.join(',')})`;
+  const res = await client.query(sql);
+  return res.rows
 }

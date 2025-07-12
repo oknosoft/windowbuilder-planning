@@ -11,9 +11,9 @@ module.exports = function ($p, log, glob) {
   const {utils: {end, moment}, adapters, cat} = $p;
 
   const sqlRem = `select rem.*, keys.ref, keys.obj, keys.specimen, keys.elm, keys.type  from
-  (select date, shift, work_center, planing_key barcode, stage, calc_order, sum(sign * power) power  FROM areg_dates
+  (select date, shift, work_center, planing_key barcode, stage, part, part_type, calc_order, sum(sign * power) power  FROM areg_dates
   where phase = $1 and date between $2 and $3
-  group by date, shift, work_center, barcode, stage, calc_order having sum(sign * power) > 0) rem
+  group by date, shift, work_center, barcode, stage, part, part_type, calc_order having sum(sign * power) > 0) rem
   left outer join keys on rem.barcode = keys.barcode order by date`;
 
   const sqlKey = `select areg_dates.*, keys.ref, keys.obj, keys.specimen, keys.elm, keys.type  from areg_dates
