@@ -227,7 +227,23 @@ module.exports = function ($p, log, acc) {
       if(class_name === 'doc.calc_order') {
         const doc = calc_order.create(attr, false, true);
         doc._obj._rev = _rev;
-        const prod = await doc.load_production(true, db);
+        const prod = await doc.load_production(true, db)
+          .then((prod) => {
+            let repeat;
+            for(const {characteristic} of doc.production) {
+              if(!characteristic.empty() && characteristic.is_new()) {
+                if(!repeat) {
+                  repeat = _id;
+                }
+                repeat += `,${characteristic.ref}`;
+              }
+            }
+            if(repeat) {
+              log(new Error(`Repeat ${repeat}`));
+              return sleep(200).then(() => doc.load_production(true, db));
+            }
+            return prod;
+          });
         docs.push({doc, prod});
         // запись в таблице calc_orders
         await order({doc, branch, abonent, year, prod});
