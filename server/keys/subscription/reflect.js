@@ -227,7 +227,28 @@ module.exports = function ($p, log, acc) {
       if(class_name === 'doc.calc_order') {
         const doc = calc_order.create(attr, false, true);
         doc._obj._rev = _rev;
-        const prod = await doc.load_production(true, db)
+        let repeatNumber = 0;
+        function loadProduction(){
+          return doc.load_production(true, db)
+            .then((prod) => {
+              let repeat;
+              for(const {characteristic} of doc.production) {
+                if(!characteristic.empty() && characteristic.is_new()) {
+                  if(!repeat) {
+                    repeat = _id;
+                  }
+                  repeat += `,${characteristic.ref}`;
+                }
+              }
+              if(repeat && repeatNumber < 3) {
+                repeatNumber++;
+                log(new Error(`Repeat №${repeatNumber} ${repeat}`));
+                return sleep(600).then(() => loadProduction());
+              }
+              return prod;
+            });
+        }
+        const prod = await loadProduction()
           .then((prod) => {
             let repeat;
             for(const {characteristic} of doc.production) {
