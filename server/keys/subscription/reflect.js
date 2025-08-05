@@ -182,15 +182,19 @@ module.exports = function ($p, log, acc) {
 
               // для всех рядов состава заполнений
               if(elm_type.is('glass')) {
+                let queries = Promise.resolve();
                 characteristic.glass_specification.find_rows({elm})
-                  .forEach(async ({_row: {inset, region}}, index) => {
+                  .forEach(({_row: {inset, region}}, index) => {
                     if(glrt.includes(inset.insert_glass_type)) {
                       index++;
                       if(!findKey(keys.rows, specimen, elm, index)) {
-                        await acc.client.query(keysSQL, [obj, specimen, elm, index, await nextBarcode(), 'glunit']);
+                        queries = queries
+                          .then(() => nextBarcode())
+                          .then((barcode) => acc.client.query(keysSQL, [obj, specimen, elm, index, barcode, 'glunit']));
                       }
                     }
                   });
+                await queries;
               }
             }
           }
@@ -222,7 +226,6 @@ module.exports = function ($p, log, acc) {
         return log(new Error(`Ошибка формата uid\nobj=${_id
         }\nbranch='${branch.suffix}' ${branch.valueOf()
         }\nabonent=${abonent.id}`));
-        continue;
       }
       if(class_name === 'doc.calc_order') {
         const doc = calc_order.create(attr, false, true);
@@ -240,31 +243,20 @@ module.exports = function ($p, log, acc) {
                   repeat += `,${characteristic.ref}`;
                 }
               }
-              if(repeat && repeatNumber < 3) {
-                repeatNumber++;
-                log(new Error(`Repeat №${repeatNumber} ${repeat}`));
-                return sleep(600).then(() => loadProduction());
+              if(repeat) {
+                if(repeatNumber < 3) {
+                  repeatNumber++;
+                  log(`Repeat №${repeatNumber} ${repeat}`, 'error');
+                  return sleep(600).then(() => loadProduction());
+                }
+                else {
+                  throw new Error(`Не найдены характеристики ${repeat}`);
+                }
               }
               return prod;
             });
         }
-        const prod = await loadProduction()
-          .then((prod) => {
-            let repeat;
-            for(const {characteristic} of doc.production) {
-              if(!characteristic.empty() && characteristic.is_new()) {
-                if(!repeat) {
-                  repeat = _id;
-                }
-                repeat += `,${characteristic.ref}`;
-              }
-            }
-            if(repeat) {
-              log(new Error(`Repeat ${repeat}`));
-              return sleep(200).then(() => doc.load_production(true, db));
-            }
-            return prod;
-          });
+        const prod = await loadProduction();
         docs.push({doc, prod});
         // запись в таблице calc_orders
         await order({doc, branch, abonent, year, prod});
