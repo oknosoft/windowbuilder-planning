@@ -11,10 +11,11 @@ const keysSQL = 'INSERT INTO keys (obj, specimen, elm, region, barcode, type) VA
 
 module.exports = function ($p, log, acc) {
   const {
-    utils: {sleep, blank},
+    utils: {sleep, blank, deflate},
     cat: {branches},
     doc: {calc_order, work_centers_performance, work_centers_task, purchase_order, planning_event},
-    enm: {elm_types, inserts_glass_types}
+    enm: {elm_types, inserts_glass_types},
+    job_prm,
   } = $p;
   const glrt = require('./glrt')($p);
   const mgrByName = (name) => {
@@ -228,11 +229,16 @@ module.exports = function ($p, log, acc) {
         }\nabonent=${abonent.id}`));
       }
       if(class_name === 'doc.calc_order') {
-        const doc = calc_order.create(attr, false, true);
+        if(typeof attr.production === 'string') {
+          await deflate.base64ToBufferAsync(attr.production)
+            .then((uint8Array) => deflate.decompress(uint8Array))
+            .then(string => attr.production = JSON.parse(string));
+        }
+        const doc = calc_order.create(attr, false, true).load_cx();
         doc._obj._rev = _rev;
         let repeatNumber = 0;
         function loadProduction(){
-          return doc.load_production(true, db)
+          return doc.load_production(!job_prm.builder.cx_in_order, db)
             .then((prod) => {
               let repeat;
               for(const {characteristic} of doc.production) {
