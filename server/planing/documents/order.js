@@ -9,43 +9,86 @@ module.exports = async function({doc, client, utils, job_prm, wsql}) {
   if(!demands.length) {
     return Promise.resolve();
   }
-  const workCenters = getWorkCenters({demands, date: doc.date, utils, wsql});
-  if(!workCenters.size) {
-    return Promise.resolve();
-  }
-  const remainders = await getRemainders({workCenters, date: doc.date, client, utils});
-  const closing = await getClosing({workCenters, doc, client, utils})
-
   const credit = [];
   const debit = [];
-  // TODO: если нет свободных рабцентров...
-  for(const demand of demands) {
-    for(const remainder of remainders) {
-      if(demand.totqty <= remainder.power) {
-        remainder.power -= demand.totqty;
+  const rm = [];
+  const closing = await getClosing({doc, client, utils});
+  // если дата есть в закрытии, используем её (перепроведение)
+  if(closing.length) {
+    for(const demand of demands) {
+      let power = demand.totqty;
+      const crows = closing.filter(row => row.planing_key === demand.planing_key && row.stage === demand.stage);
+      for(const row of crows) {
+        power -= row.power;
         credit.push({
-          date: remainder.date,
-          shift: remainder.shift,
-          work_center: remainder.work_center,
-          power: demand.totqty,
+          date: row.date,
+          shift: row.shift,
+          work_center: row.work_center,
+          power: row.power,
         });
         debit.push({
           sign: 1,
           phase: 'run',
-          date: remainder.date,
-          shift: remainder.shift,
-          work_center: remainder.work_center,
-          planing_key: demand.planing_key,
-          stage: demand.stage,
-          power: demand.totqty,
+          date: row.date,
+          shift: row.shift,
+          work_center: row.work_center,
+          planing_key: row.planing_key,
+          stage: row.stage,
+          power: row.power,
         });
-        break;
+      }
+      if(power <= 0.001) {
+        rm.push(demand);
+      }
+      else {
+        demand.totqty = power;
+      }
+    }
+    for(const demand of rm) {
+      demands.splice(demands.indexOf(demand), 1);
+    }
+  }
+
+  // если даты нет в закрытии (штатный режим)
+  if(demands.length) {
+    const workCenters = getWorkCenters({demands, date: doc.date, utils, wsql});
+    if(!workCenters.size) {
+      return Promise.resolve();
+    }
+    const remainders = await getRemainders({workCenters, date: doc.date, client, utils});
+
+    // TODO: если нет свободных рабцентров...
+    for(const demand of demands) {
+      for(const remainder of remainders) {
+        if(demand.totqty <= remainder.power) {
+          remainder.power -= demand.totqty;
+          credit.push({
+            date: remainder.date,
+            shift: remainder.shift,
+            work_center: remainder.work_center,
+            power: demand.totqty,
+          });
+          debit.push({
+            sign: 1,
+            phase: 'run',
+            date: remainder.date,
+            shift: remainder.shift,
+            work_center: remainder.work_center,
+            planing_key: demand.planing_key,
+            stage: demand.stage,
+            power: demand.totqty,
+          });
+          break;
+        }
       }
     }
   }
-  const creditValues = credit.map((v, index) => `('${register}', '${register_type}', ${index + 1}, '${period
+
+  const grouped = wsql.alasql('select date, shift, work_center, sum(power) power from ? group by date, shift, work_center', [credit]);
+
+  const creditValues = grouped.map((v, index) => `('${register}', '${register_type}', ${index + 1}, '${period
   }', -1, '${v.date}', '${v.shift}', '${v.work_center}', ${v.power})`);
-  const {length} = credit;
+  const {length} = grouped;
   const debitValues = debit.map((v, index) => `('${register}', '${register_type}', ${length + index + 1}, '${period
   }', 'run', '${v.date}', '${v.shift}', '${v.work_center}', ${v.planing_key}, '${v.stage}', '${register}', '${register_type}', '${register}', ${v.power})`);
 
@@ -165,13 +208,19 @@ order by date`;
   const res = await client.query(sql, [from, to]);
   return res.rows
     .filter(row => row.date >= workCenters.get(row.work_center))
-    .map(({date, ...v}) => ({...v, date: utils.moment(date).format('YYYY-MM-DD')}));
+    .map(({date, power, ...v}) => ({...v, power: parseFloat(power), date: utils.moment(date).format('YYYY-MM-DD')}));
 }
 
-async function getClosing({workCenters, doc: {ref, class_name}, client, utils}) {
-  const wc = Array.from(workCenters.keys()).map(v => `'${v}'`);
+async function getClosing({doc: {ref, class_name}, client, utils}) {
+  //const wc = Array.from(workCenters.keys()).map(v => `'${v}'`);
   const sql = `SELECT * FROM public.areg_dates
-where phase = 'plan' and part = '${ref}' and part_type = '${class_name}' and work_center in (${wc.join(',')})`;
+where phase = 'run' and part = '${ref}' and part_type = '${class_name}' and sign = -1`; // and work_center in (${wc.join(',')})
   const res = await client.query(sql);
-  return res.rows
+  for(const row of res.rows) {
+    row.planing_key = parseInt(row.planing_key, 10);
+    row.row_num = parseInt(row.row_num, 10);
+    row.power = parseFloat(row.power);
+    row.date = utils.moment(row.date).format('YYYY-MM-DD');
+  }
+  return res.rows;
 }
