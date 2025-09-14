@@ -16,9 +16,17 @@ module.exports = function ($p, log, glob) {
   group by date, shift, work_center, barcode, stage, part, part_type, calc_order having sum(sign * power) > 0) rem
   left outer join keys on rem.barcode = keys.barcode order by date`;
 
-  const sqlKey = `select areg_dates.*, keys.ref, keys.obj, keys.specimen, keys.elm, keys.type  from areg_dates
+  const sqlKey = `select areg_dates.*, keys.ref, keys.obj, keys.specimen, keys.elm, keys.type from areg_dates
   left outer join keys on areg_dates.planing_key = keys.barcode
     where areg_dates.planing_key = $1 order by date`;
+
+  const sqlProduct = `select areg_dates.*, keys.ref, keys.obj, keys.specimen, keys.elm, keys.type from areg_dates
+  left outer join keys on areg_dates.planing_key = keys.barcode
+    where areg_dates.planing_key in (SELECT barcode FROM keys where obj = $1) order by obj, specimen, date`;
+
+  const sqlOrder = `select areg_dates.*, keys.ref, keys.obj, keys.specimen, keys.elm, keys.type from areg_dates
+  left outer join keys on areg_dates.planing_key = keys.barcode
+    where areg_dates.calc_order = $1 order by obj, specimen, date`;
 
   async function reminder(query = {}) {
     const pq = await glob.client.query(sqlRem, [
@@ -30,8 +38,17 @@ module.exports = function ($p, log, glob) {
   }
 
   async function key(query = {}) {
-    const {key, keys} = query;
-    const pq = await glob.client.query(sqlKey, [key]);
+    const {key, keys, order, product} = query;
+    let pq;
+    if(product) {
+      pq = await glob.client.query(sqlProduct, [product]);
+    }
+    else if(order) {
+      pq = await glob.client.query(sqlOrder, [order]);
+    }
+    else {
+      pq = await glob.client.query(sqlKey, [key]);
+    }
     return pq.rows;
   }
 
