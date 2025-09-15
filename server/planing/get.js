@@ -20,6 +20,10 @@ module.exports = function ($p, log, glob) {
   left outer join keys on areg_dates.planing_key = keys.barcode
     where areg_dates.planing_key = $1 order by date`;
 
+  const sqlKeys = `select areg_dates.*, keys.ref, keys.obj, keys.specimen, keys.elm, keys.type from areg_dates
+  left outer join keys on areg_dates.planing_key = keys.barcode
+    where areg_dates.planing_key in ($1) order by obj, specimen, date`;
+
   const sqlProduct = `select areg_dates.*, keys.ref, keys.obj, keys.specimen, keys.elm, keys.type from areg_dates
   left outer join keys on areg_dates.planing_key = keys.barcode
     where areg_dates.planing_key in (SELECT barcode FROM keys where obj = $1) order by obj, specimen, date`;
@@ -45,6 +49,9 @@ module.exports = function ($p, log, glob) {
     }
     else if(order) {
       pq = await glob.client.query(sqlOrder, [order]);
+    }
+    else if(keys) {
+      pq = await glob.client.query(sqlKeys.replace('$1', keys));
     }
     else {
       pq = await glob.client.query(sqlKey, [key]);
