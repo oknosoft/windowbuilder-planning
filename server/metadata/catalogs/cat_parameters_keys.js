@@ -3,14 +3,11 @@
  *
  * &copy; Evgeniy Malyarov http://www.oknosoft.ru 2014-2018
  *
- * @module cat_parameters_keys
  */
 
-module.exports = function ({cat}) {
+exports.CatParameters_keysManager = class CatParameters_keysManager extends Object {
 
-  //Фукнция определения ключей параметров по параметрам
-  cat.parameters_keys.keys_by_params = function (params) {
-
+  keys_by_params(params) {
     //Получаем все ключи, фильтрованные по применению (если оно указано) и отсеиваем группы
     const p_params = {};
     const enum_comp = $p.enm.comparison_types;
@@ -44,5 +41,5 @@ module.exports = function ({cat}) {
       }
     })
     return res;
-  };
+  }
 }

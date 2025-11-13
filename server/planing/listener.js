@@ -26,6 +26,7 @@ module.exports = function listener($p, log, glob) {
   $p.md.once('planning_keys', ({subscription, accumulation}) => {
     const {client} = accumulation;
     glob.client = client;
+    cat.work_centers.loadRegister(client, $p);
     subscription.listeners.push(async function reflectPlaning({db, results, docs, branch, abonent, year}) {
       for(const {doc, prod} of docs) {
         try {

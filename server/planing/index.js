@@ -16,6 +16,8 @@ module.exports = function planning($p, log, route) {
   if(process.env.PLANNING_DATES) {
     log('planning_dates started');
 
+    require('./modifiers')($p);
+
     const glob = {};
     require('./listener')($p, log, glob);
 

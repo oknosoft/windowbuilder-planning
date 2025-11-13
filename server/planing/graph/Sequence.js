@@ -1,0 +1,60 @@
+
+const Graph = require('./Graph');
+const GraphEdge = require('./Edge');
+const GraphVertex = require('./Vertex');
+const UsedSet = require('./UsedSet');
+
+class StagesSequence extends Graph {
+  constructor(owner) {
+    super(owner);
+    // предопределённые узлы начала и окончания, добавляем сразу
+    this.addVertex(new GraphVertex('0'));
+    this.addVertex(new GraphVertex('end'));
+  }
+
+  addEdge(startVertex, endVertex, stage) {
+    const edge = new GraphEdge(startVertex, endVertex, stage);
+    super.addEdge(edge);
+    return edge;
+  }
+
+  evalForward({demands, date}) {
+    const used = new UsedSet(this);
+    const {owner} = this;
+    const {work_centers} = owner._manager._owner;
+    demands = demands.filter(v => v.production_kind === owner);
+    date = work_centers.constructor.RowsFragment.fetchDate(date);
+    this.getVertex('0').evalForward({demands, date, work_centers, used});
+    while (used.deferredVertexes.size) {
+      const deferred= Array.from(used.deferredVertexes);
+      used.deferredVertexes.clear();
+      for(const vertex of deferred) {
+        const patch = {}
+        for(const stage of vertex.topStages) {
+          for(const row of used.unload(stage)) {
+            if(!patch.date || patch.date < row.date) {
+              patch.date = row.date;
+            }
+          }
+        }
+        vertex.evalForward({demands, date: patch.date || date, work_centers, used, force: true});
+      }
+    }
+    const rows = used.unload();
+    used.clear();
+    for(const row of rows) {
+      const date = row.date.toFixed();
+      row.date = `${date.substring(0, 4)}-${date.substring(4, 6)}-${date.substring(6, 8)}`;
+      row.work_center = row.work_center.ref;
+      row.shift = row.shift.ref;
+      row.stage = row.stage.ref;
+    }
+    return rows;
+  }
+
+  evalBackward({demands, date}) {
+
+  }
+}
+
+module.exports = StagesSequence;
