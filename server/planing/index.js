@@ -20,9 +20,10 @@ module.exports = function planning($p, log, route) {
     require('./listener')($p, log, glob);
 
     const get = require('./get')($p, log, glob);
+    const post = require('./post')($p, log, glob);
 
     route.dates = function datesHandler(req, res) {
-      return req.method === 'GET' ? get(req, res) : get(req, res);
+      return req.method === 'GET' ? get(req, res) : post(req, res);
     };
   }
   else {
