@@ -72,33 +72,29 @@ async function getDemands({doc, job_prm, wsql}) {
         const stages = production_kinds.get(production_kind);
         // для строк спецификации с заполненным этапом, если таковой есть в видах производства
         for (const sprow of cx.specification) {
-          const {stage} = sprow;
-          if (!stage.empty() && allStages.includes(stage)) {
+          const {stage, dop} = sprow;
+          if (!stage.empty() && dop <= -4 && allStages.includes(stage)) {
             const drow = sprow.nom.demand.find({kind: stage});
-            if(drow) {
-              stages.add(stage);
-              // для всех экземпляров
-              for (let specimen = 1; specimen <= row.quantity; specimen++) {
-                const demand = {
-                  obj: cx.ref,
-                  specimen,
-                  elm: 0,
-                  region: 0,
-                  stage: stage.ref,
-                  production_kind,
-                  days_from: drow.days_from_execution,
-                  days_to: drow.days_to_execution,
-                  totqty: sprow.totqty,
-                };
-                // учтём детализацию планирования
-                if(stage.applying.is('elm') || stage.applying.is('region')) {
-                  demand.elm = sprow.elm;
-                }
-                if(stage.applying.is('region')) {
-                  demand.region = sprow.region;
-                }
-                demands.push(demand);
+            stages.add(stage);
+            // для всех экземпляров
+            for (let specimen = 1; specimen <= row.quantity; specimen++) {
+              const demand = {
+                obj: cx.ref,
+                specimen,
+                elm: 0,
+                region: 0,
+                stage: stage.ref,
+                production_kind,
+                totqty: sprow.totqty,
+              };
+              // учтём детализацию планирования
+              if(stage.applying.is('elm') || stage.applying.is('region')) {
+                demand.elm = sprow.elm;
               }
+              if(stage.applying.is('region')) {
+                demand.region = sprow.region;
+              }
+              demands.push(demand);
             }
           }
         }
@@ -109,7 +105,7 @@ async function getDemands({doc, job_prm, wsql}) {
     for(const [production_kind, stages] of production_kinds) {
       production_kinds.set(production_kind, {stages, sequence: production_kind.sequence(stages)});
     }
-    const tmp = wsql.alasql(`select obj, specimen, elm, region, stage, production_kind, max(days_from) days_from, max(days_to) days_to, sum(totqty) totqty
+    const tmp = wsql.alasql(`select obj, specimen, elm, region, stage, production_kind, sum(totqty) totqty
 from ? group by obj, specimen, elm, region, stage, production_kind`, [demands]);
     demands.length = 0;
     demands.push(...tmp);
