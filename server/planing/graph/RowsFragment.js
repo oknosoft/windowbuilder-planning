@@ -38,9 +38,9 @@ module.exports = function ({md, wsql: {alasql}, cat: {work_shifts}, enm: {planni
       }));
     }
 
-    clear(register) {
+    clear(register, register_type) {
       for(const [phase, rows] of this.byPhase) {
-        const rm = rows.filter(v => v.register === register);
+        const rm = rows.filter(v => v.register_type === register_type && v.register === register);
         for(const row of rm) {
           rows.splice(rows.indexOf(row), 1);
         }
@@ -48,7 +48,7 @@ module.exports = function ({md, wsql: {alasql}, cat: {work_shifts}, enm: {planni
     }
 
     reminders(phase, date, shift) {
-      let rows = this.byPhase.get(phase);
+      let rows = this.byPhase.get(phase) || [];
       if(date) {
         rows = rows.filter(v => v.date === date);
       }
@@ -65,7 +65,7 @@ module.exports = function ({md, wsql: {alasql}, cat: {work_shifts}, enm: {planni
       }
       const {byPhase, owner: work_center} = this;
       // TODO: можно оптимизировать пачку
-      const rows = byPhase.get(phase).filter(v => v.date >= date);
+      const rows = byPhase.get(phase)?.filter(v => v.date >= date) || [];
       for(const {date, time, shift, power} of reminders([rows])) {
         if(power >= demand && (power >= demand + used.totals(date, shift, work_center))) {
           return {work_center, date, time, shift};

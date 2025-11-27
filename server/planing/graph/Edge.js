@@ -15,16 +15,17 @@ class GraphEdge {
 
   evalForward({demands, date, work_centers, used}) {
     const {stage} = this;
-    const demand = demands.find(v => v.stage == stage);
-    if(demand?.totqty) {
+    for(const demand of demands.filter(v => v.stage == stage)) {
       const {planing_key, totqty: power} = demand;
-      const available = work_centers.availableForward({stage, date, demand: power, used});
-      if(available) {
-        used.add(available.date, available.shift, available.work_center, {planing_key, stage, time: available.time, power});
-        this.endVertex.evalForward({demands, date: available.date, work_centers, used});
-      }
-      else {
-        throw new Error('Не хватает мощности');
+      if(power) {
+        const available = work_centers.availableForward({stage, date, demand: power, used});
+        if(available) {
+          used.add(available.date, available.shift, available.work_center, {planing_key, stage, time: available.time, power});
+          this.endVertex.evalForward({demands, date: available.date, work_centers, used});
+        }
+        else {
+          throw new Error(`Не хватает мощности для этапа: '${stage.name}', дата начала: ${date}, потребность: ${power}`);
+        }
       }
     }
   }

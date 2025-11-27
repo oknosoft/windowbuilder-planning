@@ -68,10 +68,15 @@ class Subscription {
         log(`planning_keys reconnect zone=${abonent.id} since=${conf.since.split('-')[0]}`);
         return db.changes(conf)
           .on('change', async ({seq, doc}) => {
-            await this.reflect({db, last_seq: seq, results: [{doc}], branch, abonent, year});
+            try {
+              await this.reflect({db, last_seq: seq, results: [{doc}], branch, abonent, year});
+            }
+            catch (e) {
+              log(e);
+            }
           })
-          .on('error', (error) => {
-            log(error);
+          .on('error', (e) => {
+            log(e);
             setTimeout(this.reconnect.bind(this, abonent), interval);
           });
       });

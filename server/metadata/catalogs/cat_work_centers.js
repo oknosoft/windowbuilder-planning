@@ -9,19 +9,29 @@ exports.CatWork_centersManager = class CatWork_centersManager extends Object {
       moment().add(1, 'month').toDate(),
     ]);
 
-    // создадим хранилища
-    for(const work_center of this) {
-      work_center.register = new this.constructor.RowsFragment(work_center);
-    }
-    for(let {work_center, ...other} of pq.rows) {
-      this.get(work_center).register.add(other);
+    this.register = new Set();
+
+    // создадим и наполним хранилища
+    for(let {work_center: ref, ...other} of pq.rows) {
+      const work_center = this.get(ref);
+      if(!work_center.register) {
+        work_center.register = new this.constructor.RowsFragment(work_center);
+        this.register.add(work_center);
+      }
+      work_center.register.add(other);
     }
     // this.get('217d4006-1790-11eb-80cb-dff6ed303e34').register.reminders(planning_phases.plan);
 
   }
 
+  clearRegister(register, register_type) {
+    for(const work_center of this.register) {
+      work_center.register.clear(register, register_type);
+    }
+  }
+
   availableForward({stage, date, demand, used}) {
-    for(const work_center of this) {
+    for(const work_center of this.register) {
       if(work_center.work_center_kinds.find({kind: stage})) {
         const available = work_center.register.firstForward({date, demand, used});
         if(available) {

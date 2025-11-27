@@ -32,13 +32,14 @@ module.exports = function listener($p, log, glob) {
         try {
           // при любом изменении документа, удаляем старые записи
           await client.query(`DELETE FROM areg_dates where register = $1 and register_type = $2`, [doc.ref, doc.class_name]);
+          cat.work_centers.clearRegister(doc.ref, doc._manager);
           if(doc.posted) {
             switch (doc.class_name) {
               case 'doc.calc_order':
                 await calc_order({doc, client, utils, job_prm, wsql});
                 break;
               case 'doc.work_centers_performance':
-                await performance({doc, client, utils, job_prm, wsql});
+                await performance({doc, client, utils});
                 break;
               case 'doc.work_centers_task':
               case 'doc.planning_event':
