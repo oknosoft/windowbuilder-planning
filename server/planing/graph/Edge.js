@@ -30,6 +30,23 @@ class GraphEdge {
     }
   }
 
+  evalBackward({demands, date, work_centers, used}) {
+    const {stage} = this;
+    for(const demand of demands.filter(v => v.stage == stage)) {
+      const {planing_key, totqty: power} = demand;
+      if(power) {
+        const available = work_centers.availableBackward({stage, date, demand: power, used});
+        if(available) {
+          used.add(available.date, available.shift, available.work_center, {planing_key, stage, time: available.time, power});
+          this.startVertex.evalBackward({demands, date: available.date, work_centers, used});
+        }
+        else {
+          throw new Error(`Не хватает мощности для этапа: '${stage.name}', дата финала: ${date}, потребность: ${power}`);
+        }
+      }
+    }
+  }
+
   get topStage() {
     if(this.stage) {
       return this.stage;
@@ -52,6 +69,10 @@ class GraphEdge {
 
   get end() {
     return this.endVertex.key === 'end';
+  }
+
+  get start() {
+    return this.startVertex.key === '0';
   }
 
   get composite() {

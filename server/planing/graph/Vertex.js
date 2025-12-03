@@ -165,6 +165,23 @@ class GraphVertex {
     }
   }
 
+  evalBackward({demands, date, work_centers, used, force}) {
+    // для всех рёбер, исходящих из текущего...
+    for(const edge of this.getEndEdges()) {
+      if(!edge.start) {
+        if(edge.stage) {
+          edge.evalBackward({demands, date, work_centers, used});
+        }
+        else if(edge.composite && !force) {
+          used.deferredVertexes.add(edge.startVertex);
+        }
+        else {
+          edge.startVertex.evalBackward({demands, date, work_centers, used});
+        }
+      }
+    }
+  }
+
   /**
    * @param {function} [callback]
    * @return {string}

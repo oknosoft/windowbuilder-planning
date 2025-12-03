@@ -72,6 +72,20 @@ module.exports = function ({md, wsql: {alasql}, cat: {work_shifts}, enm: {planni
         }
       }
     }
+
+    firstBackward({phase, date, demand, used}) {
+      if(!phase) {
+        phase = planning_phases.plan;
+      }
+      const {byPhase, owner: work_center} = this;
+      // TODO: можно оптимизировать пачку
+      const rows = byPhase.get(phase)?.filter(v => v.date <= date) || [];
+      for(const {date, time, shift, power} of reminders([rows])) {
+        if(power >= demand && (power >= demand + used.totals(date, shift, work_center))) {
+          return {work_center, date, time, shift};
+        }
+      }
+    }
   }
 
   return RowsFragment;

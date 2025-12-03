@@ -40,5 +40,16 @@ exports.CatWork_centersManager = class CatWork_centersManager extends Object {
       }
     }
   }
+
+  availableBackward({stage, date, demand, used}) {
+    for(const work_center of this.register) {
+      if(work_center.work_center_kinds.find({kind: stage})) {
+        const available = work_center.register.firstBackward({date, demand, used});
+        if(available) {
+          return available;
+        }
+      }
+    }
+  }
   //static _replace = true;
 }
