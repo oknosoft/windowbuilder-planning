@@ -41,14 +41,7 @@ class StagesSequence extends Graph {
       }
     }
     const forwardRows = used.unload();
-    const grouped = alasql(`select work_center, date, shift, sum(power) power from ? group by work_center, date, shift`, [forwardRows]);
-    const phase = 'plan';
-    const sign = -1;
-    const register = doc.ref;
-    const register_type = doc.class_name;
-    for(const {work_center, date, shift, power} of grouped) {
-      work_center.register.add({date, shift, phase, register_type, register, power, sign});
-    }
+    const forwardGrouped = alasql(`select work_center, date, shift, sum(power) power from ? group by work_center, date, shift`, [forwardRows]);
     used.clear();
     let maxDate = 0;
     for(const row of forwardRows) {
@@ -61,30 +54,45 @@ class StagesSequence extends Graph {
       row.shift = row.shift.ref;
       row.stage = row.stage.ref;
     }
-    return {maxDate, forwardRows};
+    return {maxDate, forwardGrouped, forwardRows};
   }
 
-  evalBackward({demands, alasql, work_centers, date}) {
+  evalBackward({demands, doc, alasql, work_centers, date}) {
     const used = new UsedSet(this);
     for(const {obj, specimen} of alasql(`select distinct obj, specimen from ?`, [demands])) {
       const fragment = demands.filter(v => v.obj === obj && v.specimen === specimen);
-      this.getVertex('end').evalForward({demands: fragment, date, work_centers, used});
+      this.getVertex('end').evalBackward({demands: fragment, date, work_centers, used});
       while (used.deferredVertexes.size) {
         const deferred= Array.from(used.deferredVertexes);
         used.deferredVertexes.clear();
         for(const vertex of deferred) {
           const patch = {}
-          for(const stage of vertex.topStages) {
+          for(const stage of vertex.nextStages) {
             for(const row of used.unload(stage)) {
-              if(!patch.date || patch.date < row.date) {
+              if(!patch.date || patch.date > row.date) {
                 patch.date = row.date;
               }
             }
           }
-          vertex.evalForward({demands: fragment, date: patch.date || date, work_centers, used, force: true});
+          vertex.evalBackward({demands: fragment, date: patch.date || date, work_centers, used, force: true});
         }
       }
     }
+    const backwardRows = used.unload();
+    const backwardGrouped = alasql(`select work_center, date, shift, sum(power) power from ? group by work_center, date, shift`, [backwardRows]);
+    used.clear();
+    let minDate = Infinity;
+    for(const row of backwardRows) {
+      if(row.date < minDate) {
+        minDate = row.date;
+      }
+      const date = row.date.toFixed();
+      row.date = `${date.substring(0, 4)}-${date.substring(4, 6)}-${date.substring(6, 8)}`;
+      row.work_center = row.work_center.ref;
+      row.shift = row.shift.ref;
+      row.stage = row.stage.ref;
+    }
+    return {minDate, backwardGrouped, backwardRows};
   }
 
   evaluate({demands, doc, wsql}) {
@@ -98,17 +106,28 @@ class StagesSequence extends Graph {
     // строго говоря, дату могли указать для этапа в середине, тогда надо решать в обе стороны
 
     // ищем ближайшие
-    const {maxDate, forwardRows} = this.evalForward({demands, doc, work_centers, alasql});
+    const {maxDate, forwardGrouped, forwardRows} = this.evalForward({demands, doc, work_centers, alasql});
 
     // пытаемся подтянуть найденные ближайшие к дате финала, чтобы уменьшить остатки на переделах
+    let backwardRes = {};
     try {
-      const {minDate, backwardRows} = this.evalBackward({demands, doc, work_centers, alasql, date: maxDate});
+      backwardRes = this.evalBackward({demands, doc, work_centers, alasql, date: maxDate});
     }
     catch (e) {
       // если не уместилось в обратную сторону, можем поискать другие даты
+      e.log;
+    }
+    const {minDate, backwardGrouped, backwardRows} = backwardRes;
+
+    const phase = 'plan';
+    const sign = -1;
+    const register = doc.ref;
+    const register_type = doc.class_name;
+    for(const {work_center, date, shift, power} of backwardRows?.length ? backwardGrouped : forwardGrouped) {
+      work_center.register.add({date, shift, phase, register_type, register, power, sign});
     }
 
-    return forwardRows;
+    return backwardRows?.length ? backwardRows : forwardRows;
   }
 }
 

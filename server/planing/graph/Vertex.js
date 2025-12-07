@@ -148,6 +148,14 @@ class GraphVertex {
     return res;
   }
 
+  get nextStages() {
+    const res = new Set();
+    for(const next of this.getEdges()) {
+      res.add(next.nextStage);
+    }
+    return res;
+  }
+
   evalForward({demands, date, work_centers, used, force}) {
     // для всех рёбер, исходящих из текущего...
     for(const edge of this.getEdges()) {
@@ -168,16 +176,14 @@ class GraphVertex {
   evalBackward({demands, date, work_centers, used, force}) {
     // для всех рёбер, исходящих из текущего...
     for(const edge of this.getEndEdges()) {
-      if(!edge.start) {
-        if(edge.stage) {
-          edge.evalBackward({demands, date, work_centers, used});
-        }
-        else if(edge.composite && !force) {
-          used.deferredVertexes.add(edge.startVertex);
-        }
-        else {
-          edge.startVertex.evalBackward({demands, date, work_centers, used});
-        }
+      if(edge.stage && !edge.end) {
+        edge.evalBackward({demands, date, work_centers, used});
+      }
+      else if(edge.composite && !force) {
+        used.deferredVertexes.add(edge.startVertex);
+      }
+      else {
+        edge.startVertex.evalBackward({demands, date, work_centers, used});
       }
     }
   }

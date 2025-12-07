@@ -2,7 +2,7 @@
 
 module.exports = function ({md, wsql: {alasql}, cat: {work_shifts}, enm: {planning_phases}, utils: {moment}}) {
 
-  const reminders = alasql.compile('select date, shift, time, sum(power) power from ? group by date, shift, time');
+  const reminders = alasql.compile('select date, time, shift, sum(power) power from ? group by date, time, shift order by date, time');
 
   class RowsFragment {
 
@@ -80,7 +80,7 @@ module.exports = function ({md, wsql: {alasql}, cat: {work_shifts}, enm: {planni
       const {byPhase, owner: work_center} = this;
       // TODO: можно оптимизировать пачку
       const rows = byPhase.get(phase)?.filter(v => v.date <= date) || [];
-      for(const {date, time, shift, power} of reminders([rows])) {
+      for(const {date, time, shift, power} of reminders([rows]).reverse()) {
         if(power >= demand && (power >= demand + used.totals(date, shift, work_center))) {
           return {work_center, date, time, shift};
         }

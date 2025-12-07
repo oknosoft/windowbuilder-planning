@@ -59,6 +59,18 @@ class GraphEdge {
     }
   }
 
+  get nextStage() {
+    if(this.stage) {
+      return this.stage;
+    }
+    for(const next of this.endVertex.getEdges()) {
+      const {nextStage} = next;
+      if(nextStage) {
+        return nextStage;
+      }
+    }
+  }
+
   /**
    * @type {string}
    */
@@ -77,6 +89,10 @@ class GraphEdge {
 
   get composite() {
     return this.endVertex.getEndEdges().length > 1;
+  }
+
+  get startComposite() {
+    return this.startVertex.getEndEdges().length > 1;
   }
 
   /**
