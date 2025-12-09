@@ -136,7 +136,8 @@ CREATE TYPE public.refs AS ENUM (
     'doc.purchase',
     'doc.nom_prices_setup',
     'doc.inventory_cuts',
-    'doc.inventory_goods'
+    'doc.inventory_goods',
+    'doc.scaning'
 );
 
 
