@@ -55,7 +55,7 @@ module.exports = async function({doc, client, utils, job_prm, wsql}) {
     if(!workCenters.size) {
       return Promise.resolve();
     }
-    const remainders = await getRemainders({workCenters, date: doc.date, client, utils});
+    const remainders = await getRemainders({workCenters, date: doc.date, client, utils, wsql});
 
     // TODO: если нет свободных рабцентров...
     for(const demand of demands) {
@@ -193,11 +193,39 @@ function getWorkCenters({demands, date, utils, wsql}) {
   return res;
 }
 
-async function getRemainders({workCenters, date, client, utils}) {
-  const wc = Array.from(workCenters.keys()).map(v => `'${v}'`);
-  const from = utils.moment(date).format('YYYY-MM-DD');
-  const to = utils.moment(date).add(20, 'days').format('YYYY-MM-DD');
-  const sql = `select date, shift, work_center, sum(power) power from
+async function getRemainders({workCenters, date, client, utils, wsql}) {
+  const {work_centers, work_shifts} = wsql.$p.cat;
+  const wc = []
+  const always = [];
+  for(const work_center of workCenters.keys()) {
+    const curr = work_centers.get(work_center);
+    if(curr.available) {
+      const start = workCenters.get(work_center);
+      for(const shift of work_shifts) {
+        if(!shift.predefined_name) {
+          for(let i = 0; i < 7; i++) {
+            const time = utils.moment(date).set({hour: 0, minute: 0, second: 0}).add(i, 'day');
+            if(time.toDate() >= start) {
+              always.push({
+                date: time.format('YYYY-MM-DD'),
+                shift: shift.ref,
+                work_center,
+                power: 1e6,
+              })
+            }
+          }
+        }
+      }
+    }
+    else {
+      wc.push(`'${work_center}'`);
+    }
+  }
+
+  if(wc.length) {
+    const from = utils.moment(date).format('YYYY-MM-DD');
+    const to = utils.moment(date).add(20, 'days').format('YYYY-MM-DD');
+    const sql = `select date, shift, work_center, sum(power) power from
 (SELECT date, shift, work_center, sign * power power FROM public.areg_dates
 where phase = 'plan'
 and date between $1 and $2
@@ -205,10 +233,15 @@ and work_center in (${wc.join(',')})) raw
 group by date, shift, work_center
 having sum(power) > 0
 order by date`;
-  const res = await client.query(sql, [from, to]);
-  return res.rows
-    .filter(row => row.date >= workCenters.get(row.work_center))
-    .map(({date, power, ...v}) => ({...v, power: parseFloat(power), date: utils.moment(date).format('YYYY-MM-DD')}));
+    const res = await client.query(sql, [from, to]);
+    return res.rows
+      .filter(row => row.date >= workCenters.get(row.work_center))
+      .map(({date, power, ...v}) => ({...v, power: parseFloat(power), date: utils.moment(date).format('YYYY-MM-DD')}))
+      .concat(always);
+  }
+  else {
+    return always;
+  }
 }
 
 async function getClosing({doc: {ref, class_name}, client, utils}) {

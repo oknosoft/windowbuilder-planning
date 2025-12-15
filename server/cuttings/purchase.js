@@ -10,9 +10,9 @@ module.exports = function ($p, log, acc) {
     try{
       const {hrtime: start, parsed: {paths, path}} = req;
       let {register, register_type, rows} = JSON.parse(await getBody(req));
-      if(!['doc.purchase', 'doc.selling'].includes(register_type)) {
+      if(!['doc.purchase', 'doc.selling', 'doc.inventory_goods'].includes(register_type)) {
         log(`register_type: ${register_type}`);
-        register_type = 'doc.purchase';
+        register_type = 'doc.inventory_goods';
       }
 
       await acc.client.query('delete from areg_cuttings where register = $1 and register_type = $2', [register, register_type]);
