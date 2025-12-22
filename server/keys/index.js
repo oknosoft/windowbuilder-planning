@@ -21,6 +21,7 @@ module.exports = function planning_keys($p, log, route) {
     }
     route.pgsql.keys = require('./feed')($p, log, accumulation);
     route.pgsql.cuttings = require('../cuttings/purchase')($p, log, accumulation);
+    route.pgsql.cuts = require('../cuttings/reminders')($p, log, accumulation);
 
   }
   else {
