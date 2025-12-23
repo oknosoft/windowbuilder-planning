@@ -11,7 +11,7 @@ module.exports = function ($p, log, acc) {
       const {hrtime: start, parsed: {paths, path}} = req;
       let {nom} = JSON.parse(await getBody(req));
 
-      const pq = await acc.client.query(`SELECT nom, len, width, sum(qty * sign) qty FROM public.areg_cuttings where nom = ANY ($1) group by nom, len, width`, [nom]);
+      const pq = await acc.client.query(`SELECT nom, len, width, sum(qty * sign) qty FROM public.areg_cuttings where nom = ANY ($1) group by nom, len, width having sum(qty * sign) > 0`, [nom]);
       const data = {ok: true, rows: pq.rows};
 
       const diff = hrtime(start);
