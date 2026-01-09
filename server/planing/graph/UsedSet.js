@@ -4,7 +4,16 @@ class UsedSet extends Map {
   constructor(owner) {
     super();
     this.owner = owner;
-    this.deferredVertexes = new Set();
+    this.deferredEdges = new Map();
+    this.stackMap = new Map();
+    this.stackOrder = [];
+  }
+
+  stackKey() {
+    const key = this.owner.owner._manager._owner.$p.utils.generate_guid();
+    this.stackOrder.push(key);
+    this.stackMap.set(key, []);
+    return key;
   }
 
   add(date, shift, work_center, row) {
@@ -64,6 +73,9 @@ class UsedSet extends Map {
       }
       byDate.clear();
     }
+    this.deferredEdges.clear();
+    this.stackMap.clear();
+    this.stackOrder.length = 0;
     super.clear();
   }
 

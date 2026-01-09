@@ -13,15 +13,26 @@ class GraphEdge {
     this.stage = stage;
   }
 
-  evalForward({demands, date, work_centers, used}) {
+  evalForward({demands, date, time, work_centers, used, startKey}) {
     const {stage} = this;
+    if(!startKey) {
+      startKey = used.stackKey();
+    }
     for(const demand of demands.filter(v => v.stage == stage)) {
       const {planing_key, totqty: power} = demand;
       if(power) {
-        const available = work_centers.availableForward({stage, date, demand: power, used});
+        const available = work_centers.availableForward({stage, date, time, demand: power, used, startKey});
         if(available) {
-          used.add(available.date, available.shift, available.work_center, {planing_key, stage, time: available.time, power});
-          this.endVertex.evalForward({demands, date: available.date, work_centers, used});
+          used.add(available.date, available.shift, available.work_center, {planing_key, stage, time: available.start, power});
+          // если есть предыдущий, добавим время предыдущего и время перехода
+          const stack = used.stackMap.get(available.startKey || startKey);
+          if(!stack.length || stack[stack.length - 1].stage !== stage) {
+            stack.push({stage, ...available});
+          }
+          else {
+            Object.assign(stack[stack.length - 1], available);
+          }
+          this.endVertex.evalForward({demands, date : available.date, time: available.start, work_centers, used, startKey});
         }
         else {
           throw new Error(`Не хватает мощности для этапа: '${stage.name}', дата начала: ${date}, потребность: ${power}`);

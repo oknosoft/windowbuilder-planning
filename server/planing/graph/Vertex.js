@@ -140,6 +140,10 @@ class GraphVertex {
     return this;
   }
 
+  /**
+   * Предыдущие этапы
+   * @return {Set<any>}
+   */
   get topStages() {
     const res = new Set();
     for(const prev of this.getEndEdges()) {
@@ -148,6 +152,10 @@ class GraphVertex {
     return res;
   }
 
+  /**
+   * Следующие этапы
+   * @return {Set<any>}
+   */
   get nextStages() {
     const res = new Set();
     for(const next of this.getEdges()) {
@@ -156,34 +164,34 @@ class GraphVertex {
     return res;
   }
 
-  evalForward({demands, date, work_centers, used, force}) {
+  evalForward({demands, date, time, work_centers, used, startKey, force}) {
     // для всех рёбер, исходящих из текущего...
     for(const edge of this.getEdges()) {
       if(!edge.end) {
         if(edge.stage) {
-          edge.evalForward({demands, date, work_centers, used});
+          edge.evalForward({demands, date, time, work_centers, used, startKey});
         }
         else if(edge.composite && !force) {
-          used.deferredVertexes.add(edge.endVertex);
+          used.deferredEdges.set(edge, startKey);
         }
         else {
-          edge.endVertex.evalForward({demands, date, work_centers, used});
+          edge.endVertex.evalForward({demands, date, time, work_centers, used, startKey});
         }
       }
     }
   }
 
-  evalBackward({demands, date, work_centers, used, force}) {
+  evalBackward({demands, date, time, work_centers, used, startKey, force}) {
     // для всех рёбер, исходящих из текущего...
     for(const edge of this.getEndEdges()) {
       if(edge.stage && !edge.end) {
-        edge.evalBackward({demands, date, work_centers, used});
+        edge.evalBackward({demands, date, time, work_centers, used});
       }
-      else if(edge.composite && !force) {
-        used.deferredVertexes.add(edge.startVertex);
+      else if(edge.startComposite && !edge.start && !force) {
+        used.deferredEdges.set(edge, startKey);
       }
       else {
-        edge.startVertex.evalBackward({demands, date, work_centers, used});
+        edge.startVertex.evalBackward({demands, date, time, work_centers, used, startKey});
       }
     }
   }

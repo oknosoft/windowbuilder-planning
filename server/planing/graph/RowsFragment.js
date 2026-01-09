@@ -2,7 +2,7 @@
 
 module.exports = function ({md, wsql: {alasql}, cat: {work_shifts}, enm: {planning_phases}, utils: {moment}}) {
 
-  const reminders = alasql.compile('select date, time, shift, sum(power) power from ? group by date, time, shift order by date, time');
+  const reminders = alasql.compile('select date, start, fin, shift, sum(power) power, sum(case when power > 0 then power else 0 end) debit from ? group by date, start, fin, shift order by date, start');
 
   class RowsFragment {
 
@@ -31,7 +31,8 @@ module.exports = function ({md, wsql: {alasql}, cat: {work_shifts}, enm: {planni
       byPhase.get(phase).push(Object.assign(other, {
         date: RowsFragment.fetchDate(date),
         shift,
-        time: shift.timeOrder,
+        start: shift.timeOrder,
+        fin: shift.timeOrder + shift.duration,
         register_type: md.mgr_by_class_name(register_type),
         part_type: part_type && md.mgr_by_class_name(part_type),
         power: sign * parseFloat(power),
@@ -59,30 +60,31 @@ module.exports = function ({md, wsql: {alasql}, cat: {work_shifts}, enm: {planni
       return res;
     }
 
-    firstForward({phase, date, demand, used}) {
+    firstForward({phase, date, time, demand, used}) {
       if(!phase) {
         phase = planning_phases.plan;
       }
       const {byPhase, owner: work_center} = this;
       // TODO: можно оптимизировать пачку
-      const rows = byPhase.get(phase)?.filter(v => v.date >= date) || [];
-      for(const {date, time, shift, power} of reminders([rows])) {
+      const rows = byPhase.get(phase)?.filter(v =>
+        v.date >= date && v.fin >= time) || [];
+      for(const {date, start, fin, shift, power} of reminders([rows])) {
         if(power >= demand && (power >= demand + used.totals(date, shift, work_center))) {
-          return {work_center, date, time, shift};
+          return {work_center, date, start, fin, shift};
         }
       }
     }
 
-    firstBackward({phase, date, demand, used}) {
+    firstBackward({phase, date, time, demand, used}) {
       if(!phase) {
         phase = planning_phases.plan;
       }
       const {byPhase, owner: work_center} = this;
       // TODO: можно оптимизировать пачку
       const rows = byPhase.get(phase)?.filter(v => v.date <= date) || [];
-      for(const {date, time, shift, power} of reminders([rows]).reverse()) {
+      for(const {date, start, fin, shift, power} of reminders([rows]).reverse()) {
         if(power >= demand && (power >= demand + used.totals(date, shift, work_center))) {
-          return {work_center, date, time, shift};
+          return {work_center, date, start, fin, shift};
         }
       }
     }

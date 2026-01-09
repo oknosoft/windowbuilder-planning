@@ -23,20 +23,26 @@ class StagesSequence extends Graph {
     const date = work_centers.constructor.RowsFragment.fetchDate(doc.date);
     for(const {obj, specimen} of alasql(`select distinct obj, specimen from ?`, [demands])) {
       const fragment = demands.filter(v => v.obj === obj && v.specimen === specimen);
-      this.getVertex('0').evalForward({demands: fragment, date, work_centers, used});
-      while (used.deferredVertexes.size) {
-        const deferred= Array.from(used.deferredVertexes);
-        used.deferredVertexes.clear();
-        for(const vertex of deferred) {
-          const patch = {}
-          for(const stage of vertex.topStages) {
-            for(const row of used.unload(stage)) {
-              if(!patch.date || patch.date < row.date) {
-                patch.date = row.date;
-              }
-            }
+      this.getVertex('0').evalForward({demands: fragment, date, time: 0, work_centers, used});
+      while (used.deferredEdges.size) {
+        const deferred= Array.from(used.deferredEdges);
+        used.deferredEdges.clear();
+        const vertexes = new Map();
+        for(const [edge, startKey] of deferred) {
+          const stack = used.stackMap.get(startKey);
+          if(!vertexes.has(edge.endVertex)) {
+            vertexes.set(edge.endVertex, {startKey: new Set()});
           }
-          vertex.evalForward({demands: fragment, date: patch.date || date, work_centers, used, force: true});
+          const patch = vertexes.get(edge.endVertex);
+          patch.startKey.add(startKey);
+          const last = stack[stack.length - 1];
+          if(!patch.date || patch.date < last.date) {
+            patch.date = last.date;
+            patch.time = last.start;
+          }
+        }
+        for(const [vertex, patch] of vertexes) {
+          vertex.evalForward({demands: fragment, ...patch, work_centers, used, force: true});
         }
       }
     }
@@ -62,9 +68,9 @@ class StagesSequence extends Graph {
     for(const {obj, specimen} of alasql(`select distinct obj, specimen from ?`, [demands])) {
       const fragment = demands.filter(v => v.obj === obj && v.specimen === specimen);
       this.getVertex('end').evalBackward({demands: fragment, date, work_centers, used});
-      while (used.deferredVertexes.size) {
-        const deferred= Array.from(used.deferredVertexes);
-        used.deferredVertexes.clear();
+      while (used.deferredEdges.size) {
+        const deferred= Array.from(used.deferredEdges);
+        used.deferredEdges.clear();
         for(const vertex of deferred) {
           const patch = {}
           for(const stage of vertex.nextStages) {
