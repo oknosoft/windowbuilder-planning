@@ -181,17 +181,32 @@ class GraphVertex {
     }
   }
 
-  evalBackward({demands, date, time, work_centers, used, startKey, force}) {
-    // для всех рёбер, исходящих из текущего...
+  evalBackward({demands, date, time, work_centers, used, endKey, force}) {
+    // для всех рёбер, завершающихся в текущем...
+    const keyMap = new Map();
     for(const edge of this.getEndEdges()) {
+      // для составных узлов, создаём новый стэк и помещаем на его вершину, запись предыдущего
+      if(edge.composite) {
+        const oldStack = used.stackMap.get(endKey);
+        keyMap.set(edge, used.stackKey())
+        const newStack = used.stackMap.get(keyMap.get(edge));
+        if(oldStack.length) {
+          newStack.push(oldStack[oldStack.length - 1]);
+        }
+      }
+    }
+    for(const edge of this.getEndEdges()) {
+      if(edge.composite) {
+        endKey = keyMap.get(edge);
+      }
       if(edge.stage && !edge.end) {
-        edge.evalBackward({demands, date, time, work_centers, used});
+        edge.evalBackward({demands, date, time, work_centers, used, endKey});
       }
       else if(edge.startComposite && !edge.start && !force) {
-        used.deferredEdges.set(edge, startKey);
+        used.deferredEdges.set(edge, endKey);
       }
       else {
-        edge.startVertex.evalBackward({demands, date, time, work_centers, used, startKey});
+        edge.startVertex.evalBackward({demands, date, time, work_centers, used, endKey});
       }
     }
   }

@@ -81,7 +81,7 @@ module.exports = function ({md, wsql: {alasql}, cat: {work_shifts}, enm: {planni
       }
       const {byPhase, owner: work_center} = this;
       // TODO: можно оптимизировать пачку
-      const rows = byPhase.get(phase)?.filter(v => v.date <= date) || [];
+      const rows = byPhase.get(phase)?.filter(v => v.date <= date && (!time || v.start <= time)) || [];
       for(const {date, start, fin, shift, power} of reminders([rows]).reverse()) {
         if(power >= demand && (power >= demand + used.totals(date, shift, work_center))) {
           return {work_center, date, start, fin, shift};

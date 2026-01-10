@@ -67,7 +67,7 @@ class StagesSequence extends Graph {
     const used = new UsedSet(this);
     for(const {obj, specimen} of alasql(`select distinct obj, specimen from ?`, [demands])) {
       const fragment = demands.filter(v => v.obj === obj && v.specimen === specimen);
-      this.getVertex('end').evalBackward({demands: fragment, date, work_centers, used});
+      this.getVertex('end').evalBackward({demands: fragment, date, work_centers, used, endKey: used.stackKey()});
       while (used.deferredEdges.size) {
         const deferred= Array.from(used.deferredEdges);
         used.deferredEdges.clear();

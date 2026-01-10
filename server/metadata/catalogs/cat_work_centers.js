@@ -42,7 +42,7 @@ exports.CatWork_centersManager = class CatWork_centersManager extends Object {
           if(prev?.stage === stage && stack.length > 1) {
             prev = stack[stack.length - 2];
           }
-          if(prev) {
+          if(prev && prev.stage !== stage && prev.work_center !== work_center) {
             const jumpDelay = prev.work_center.delay(work_center) || prev.work_center.delay(stage);
             if(jumpDelay && dateShift.jumpDelay < jumpDelay) {
               dateShift.jumpDelay = jumpDelay;
@@ -57,6 +57,7 @@ exports.CatWork_centersManager = class CatWork_centersManager extends Object {
           dateShift.date += 1;
           dateShift.time -= 86400;
         }
+        // TODO: набрать массив доступных и выбрать оптимальный
         const available = work_center.register.firstForward({...dateShift, demand, used});
         if(available) {
           if(dateShift.startKey) {
@@ -68,11 +69,40 @@ exports.CatWork_centersManager = class CatWork_centersManager extends Object {
     }
   }
 
-  availableBackward({stage, date, demand, used}) {
+  availableBackward({stage, date, time, demand, used, endKey}) {
+    const keys = typeof endKey === 'string' ? new Set([endKey]) : endKey;
     for(const work_center of this.register) {
       if(work_center.work_center_kinds.find({kind: stage})) {
-        const available = work_center.register.firstBackward({date, time, demand, used});
+        const dateShift = {date, time, jumpDelay: 0};
+        for(const endKey of keys) {
+          const stack = used.stackMap.get(endKey);
+          let prev = stack.length && stack[stack.length - 1];
+          if(prev?.stage === stage && stack.length > 1) {
+            prev = stack[stack.length - 2];
+          }
+          if(prev && prev.stage !== stage && prev.work_center !== work_center) {
+            const jumpDelay = work_center.delay(prev.work_center) || work_center.delay(stage);
+            if(jumpDelay && dateShift.jumpDelay < jumpDelay) {
+              dateShift.jumpDelay = jumpDelay;
+              dateShift.endKey = endKey;
+            }
+          }
+        }
+        // while (delay > 86400) {
+        //   dateShift.date -= 1;
+        //   delay -= 86400;
+        // }
+        if(dateShift.jumpDelay) {
+          //dateShift.time -= dateShift.jumpDelay;
+        }
+        // TODO: набрать массив доступных и выбрать оптимальный (доступен позже и время перехода меньше)
+        const available = work_center.register.firstBackward({...dateShift, demand, used});
         if(available) {
+          if(dateShift.endKey) {
+            available.endKey = dateShift.endKey;
+          }
+          available.delay = work_center.delay() + dateShift.jumpDelay;
+
           return available;
         }
       }

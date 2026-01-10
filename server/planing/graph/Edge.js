@@ -41,15 +41,23 @@ class GraphEdge {
     }
   }
 
-  evalBackward({demands, date, work_centers, used}) {
+  evalBackward({demands, date, time, work_centers, used, endKey}) {
     const {stage} = this;
     for(const demand of demands.filter(v => v.stage == stage)) {
       const {planing_key, totqty: power} = demand;
       if(power) {
-        const available = work_centers.availableBackward({stage, date, demand: power, used});
+        const available = work_centers.availableBackward({stage, date, time, demand: power, used, endKey});
         if(available) {
-          used.add(available.date, available.shift, available.work_center, {planing_key, stage, time: available.time, power});
-          this.startVertex.evalBackward({demands, date: available.date, work_centers, used});
+          used.add(available.date, available.shift, available.work_center, {planing_key, stage, time: available.start, power});
+          // если есть предыдущий, добавим время предыдущего и время перехода
+          const stack = used.stackMap.get(available.endKey || endKey);
+          if(!stack.length || stack[stack.length - 1].stage !== stage) {
+            stack.push({stage, ...available});
+          }
+          else {
+            Object.assign(stack[stack.length - 1], available);
+          }
+          this.startVertex.evalBackward({demands, date: available.date, time: available.fin, work_centers, used, endKey});
         }
         else {
           throw new Error(`Не хватает мощности для этапа: '${stage.name}', дата финала: ${date}, потребность: ${power}`);
