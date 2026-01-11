@@ -4,12 +4,19 @@ const GraphEdge = require('./Edge');
 const GraphVertex = require('./Vertex');
 const UsedSet = require('./UsedSet');
 
+const queries = {};
+
 class StagesSequence extends Graph {
   constructor(owner) {
     super(owner);
     // предопределённые узлы начала и окончания, добавляем сразу
     this.addVertex(new GraphVertex('0'));
     this.addVertex(new GraphVertex('end'));
+    if(!queries.distinctObjSpecimen) {
+      const {alasql} = owner._manager._owner.$p.wsql;
+      queries.distinctObjSpecimen = alasql.compile('select distinct obj, specimen from ?');
+      queries.grouped = alasql.compile('select work_center, date, shift, sum(power) power from ? group by work_center, date, shift');
+    }
   }
 
   addEdge(startVertex, endVertex, stage) {
@@ -18,10 +25,10 @@ class StagesSequence extends Graph {
     return edge;
   }
 
-  evalForward({demands, doc, alasql, work_centers}) {
+  evalForward({demands, doc, work_centers}) {
     const used = new UsedSet(this);
     const date = work_centers.constructor.RowsFragment.fetchDate(doc.date);
-    for(const {obj, specimen} of alasql(`select distinct obj, specimen from ?`, [demands])) {
+    for(const {obj, specimen} of queries.distinctObjSpecimen([demands])) {
       const fragment = demands.filter(v => v.obj === obj && v.specimen === specimen);
       this.getVertex('0').evalForward({demands: fragment, date, time: 0, work_centers, used});
       while (used.deferredEdges.size) {
@@ -47,7 +54,7 @@ class StagesSequence extends Graph {
       }
     }
     const forwardRows = used.unload();
-    const forwardGrouped = alasql(`select work_center, date, shift, sum(power) power from ? group by work_center, date, shift`, [forwardRows]);
+    const forwardGrouped = queries.grouped([forwardRows]);
     used.clear();
     let maxDate = 0;
     for(const row of forwardRows) {
@@ -63,9 +70,9 @@ class StagesSequence extends Graph {
     return {maxDate, forwardGrouped, forwardRows};
   }
 
-  evalBackward({demands, doc, alasql, work_centers, date}) {
+  evalBackward({demands, doc, work_centers, date}) {
     const used = new UsedSet(this);
-    for(const {obj, specimen} of alasql(`select distinct obj, specimen from ?`, [demands])) {
+    for(const {obj, specimen} of queries.distinctObjSpecimen([demands])) {
       const fragment = demands.filter(v => v.obj === obj && v.specimen === specimen);
       this.getVertex('end').evalBackward({demands: fragment, date, work_centers, used, endKey: used.stackKey()});
       while (used.deferredEdges.size) {
@@ -85,7 +92,7 @@ class StagesSequence extends Graph {
       }
     }
     const backwardRows = used.unload();
-    const backwardGrouped = alasql(`select work_center, date, shift, sum(power) power from ? group by work_center, date, shift`, [backwardRows]);
+    const backwardGrouped = queries.grouped([backwardRows]);
     used.clear();
     let minDate = Infinity;
     for(const row of backwardRows) {
@@ -101,10 +108,9 @@ class StagesSequence extends Graph {
     return {minDate, backwardGrouped, backwardRows};
   }
 
-  evaluate({demands, doc, wsql}) {
+  evaluate({demands, doc}) {
     const {owner} = this;
     const {work_centers} = owner._manager._owner;
-    const {alasql} = wsql;
     // решаем задачу для текущего вида производства, потребности других видов - отбрасываем
     demands = demands.filter(v => v.production_kind === owner);
 
@@ -112,12 +118,12 @@ class StagesSequence extends Graph {
     // строго говоря, дату могли указать для этапа в середине, тогда надо решать в обе стороны
 
     // ищем ближайшие
-    const {maxDate, forwardGrouped, forwardRows} = this.evalForward({demands, doc, work_centers, alasql});
+    const {maxDate, forwardGrouped, forwardRows} = this.evalForward({demands, doc, work_centers});
 
     // пытаемся подтянуть найденные ближайшие к дате финала, чтобы уменьшить остатки на переделах
     let backwardRes = {};
     try {
-      backwardRes = this.evalBackward({demands, doc, work_centers, alasql, date: maxDate});
+      backwardRes = this.evalBackward({demands, doc, work_centers, date: maxDate});
     }
     catch (e) {
       // если не уместилось в обратную сторону, можем поискать другие даты

@@ -12,7 +12,7 @@ module.exports = async function({doc, client, utils, job_prm, wsql}) {
   const credit = [];
   const debit = [];
   for(const [production_kind, {stages, sequence}] of production_kinds) {
-    for(const row of sequence.evaluate({demands, doc, wsql})) {
+    for(const row of sequence.evaluate({demands, doc})) {
       credit.push({
         date: row.date,
         shift: row.shift,

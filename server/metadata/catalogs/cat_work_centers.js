@@ -81,19 +81,20 @@ exports.CatWork_centersManager = class CatWork_centersManager extends Object {
             prev = stack[stack.length - 2];
           }
           if(prev && prev.stage !== stage && prev.work_center !== work_center) {
-            const jumpDelay = work_center.delay(prev.work_center) || work_center.delay(stage);
+            const jumpDelay = work_center.delay(prev.work_center) || work_center.delay(prev.stage);
             if(jumpDelay && dateShift.jumpDelay < jumpDelay) {
               dateShift.jumpDelay = jumpDelay;
               dateShift.endKey = endKey;
             }
           }
         }
-        // while (delay > 86400) {
-        //   dateShift.date -= 1;
-        //   delay -= 86400;
-        // }
-        if(dateShift.jumpDelay) {
-          //dateShift.time -= dateShift.jumpDelay;
+        let delay = work_center.delay() + dateShift.jumpDelay
+        while (delay > 86400) {
+          dateShift.date -= 1;
+          delay -= 86400;
+        }
+        if(delay) {
+          dateShift.time -= delay;
         }
         // TODO: набрать массив доступных и выбрать оптимальный (доступен позже и время перехода меньше)
         const available = work_center.register.firstBackward({...dateShift, demand, used});
@@ -101,13 +102,13 @@ exports.CatWork_centersManager = class CatWork_centersManager extends Object {
           if(dateShift.endKey) {
             available.endKey = dateShift.endKey;
           }
-          available.delay = work_center.delay() + dateShift.jumpDelay;
 
           return available;
         }
       }
     }
   }
+
   //static _replace = true;
 }
 
