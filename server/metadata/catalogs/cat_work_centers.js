@@ -2,7 +2,7 @@
 
 exports.CatWork_centersManager = class CatWork_centersManager extends Object {
 
-  async loadRegister(client, {md, wsql: {alasql}, cat: {work_shifts}, enm: {planning_phases}, utils: {moment}}) {
+  async loadRegister(client, {md, wsql: {alasql}, cat: {work_shifts, delivery_directions}, enm: {planning_phases}, utils: {moment}}) {
     const pq = await client.query(`SELECT register, register_type, sign, phase,
       date, shift, work_center, planing_key, stage, calc_order, power, part, part_type FROM areg_dates where phase = 'plan' and date between $1 and $2`, [
       moment().add(-3, 'month').toDate(), // TODO: вернуть
@@ -13,7 +13,7 @@ exports.CatWork_centersManager = class CatWork_centersManager extends Object {
 
     // создадим и наполним хранилища
     for(let {work_center: ref, ...other} of pq.rows) {
-      const work_center = this.get(ref);
+      const work_center = this.by_ref[ref] || delivery_directions.by_ref[ref];
       if(!work_center.register) {
         work_center.register = new this.constructor.RowsFragment(work_center);
         this.register.add(work_center);
@@ -33,7 +33,7 @@ exports.CatWork_centersManager = class CatWork_centersManager extends Object {
   availableForward({stage, date, time, demand, used, startKey}) {
     const keys = typeof startKey === 'string' ? new Set([startKey]) : startKey;
     for(const work_center of this.register) {
-      if(work_center.work_center_kinds.find({kind: stage})) {
+      if(work_center.checkStage({stage})) {
         const selfDelay = work_center.delay();
         const dateShift = {date, time: time + selfDelay, jumpDelay: 0};
         for(const startKey of keys) {
@@ -72,7 +72,7 @@ exports.CatWork_centersManager = class CatWork_centersManager extends Object {
   availableBackward({stage, date, time, demand, used, endKey}) {
     const keys = typeof endKey === 'string' ? new Set([endKey]) : endKey;
     for(const work_center of this.register) {
-      if(work_center.work_center_kinds.find({kind: stage})) {
+      if(work_center.checkStage({stage})) {
         const dateShift = {date, time, jumpDelay: 0};
         for(const endKey of keys) {
           const stack = used.stackMap.get(endKey);
@@ -119,5 +119,9 @@ exports.CatWork_centers = class CatWork_centers extends Object {
       recipient = this;
     }
     return this.time_standard.find({recipient})?.event_time || 0;
+  }
+
+  checkStage({stage: kind}) {
+    return this.work_center_kinds.find({kind});
   }
 }

@@ -40,7 +40,7 @@ class GraphEdge {
     }
     if(stack) {
       const last = stack[stack.length - 1];
-      this.endVertex.evalForward({demands, date : last.date, time: last.start, work_centers, used, startKey});
+      this.endVertex.evalForward({demands, date : last.date, time: last.start, work_centers, used, startKey: last.startKey || startKey});
     }
   }
 

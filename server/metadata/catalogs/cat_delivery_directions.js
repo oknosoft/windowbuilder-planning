@@ -41,3 +41,14 @@ module.exports = function ({cat, adapters}) {
   });
 }
 
+exports.CatDelivery_directions = class CatDelivery_directions extends Object {
+
+  delay(recipient) {
+    return 0;
+  }
+
+  checkStage({stage}) {
+    return stage.predefined_name === 'delivery';
+  }
+}
+

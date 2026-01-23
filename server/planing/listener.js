@@ -39,7 +39,7 @@ module.exports = function listener($p, log, glob) {
                 await calc_order({doc, client, utils, job_prm, wsql});
                 break;
               case 'doc.work_centers_performance':
-                await performance({doc, client, utils});
+                await performance({doc, cat, client, utils});
                 break;
               case 'doc.work_centers_task':
               case 'doc.planning_event':

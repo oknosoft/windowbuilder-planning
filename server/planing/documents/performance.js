@@ -1,5 +1,5 @@
 
-module.exports = function({doc, client, utils}) {
+module.exports = function({doc, cat: {work_centers}, client, utils}) {
   const values = [];
   const register = doc.ref;
   const register_type = doc.class_name;
@@ -28,8 +28,8 @@ module.exports = function({doc, client, utils}) {
       const sign = 1;
       for(const [work_center, rows] of sets) {
         if(!work_center.register) {
-          work_center.register = new work_center._manager.constructor.RowsFragment(work_center);
-          work_center._manager.register.add(work_center);
+          work_center.register = new work_centers.constructor.RowsFragment(work_center);
+          work_centers.register.add(work_center);
         }
         for(const {date, work_shift, power} of rows) {
           work_center.register.add({date, shift: work_shift, phase, register_type, register, power, sign});

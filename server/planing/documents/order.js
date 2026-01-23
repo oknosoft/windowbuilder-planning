@@ -12,7 +12,7 @@ module.exports = async function({doc, client, utils, job_prm, wsql}) {
   const credit = [];
   const debit = [];
   for(const [production_kind, {stages, sequence}] of production_kinds) {
-    for(const row of sequence.evaluate({demands, doc})) {
+    for(const row of sequence.evaluate({demands, supply: stages.supply, doc, job_prm})) {
       credit.push({
         date: row.date,
         shift: row.shift,
@@ -72,9 +72,15 @@ async function getDemands({doc, job_prm, wsql}) {
         const stages = production_kinds.get(production_kind);
         // для строк спецификации с заполненным этапом, если таковой есть в видах производства
         for (const sprow of cx.specification) {
-          const {stage, dop} = sprow;
-          if (!stage.empty() && dop <= -4 && allStages.includes(stage)) {
-            const drow = sprow.nom.demand.find({kind: stage});
+          const {stage, dop, nom} = sprow;
+          for(const drow of nom.demand) {
+            if(!drow.kind && drow.days_to_execution) {
+              if(!stages.supply || stages.supply < drow.days_to_execution) {
+                stages.supply = drow.days_to_execution;
+              }
+            }
+          }
+          if (!stage.empty() && dop < 0 && (-dop & 4) && allStages.includes(stage)) {
             stages.add(stage);
             // для всех экземпляров
             for (let specimen = 1; specimen <= row.quantity; specimen++) {

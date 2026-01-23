@@ -25,9 +25,13 @@ class StagesSequence extends Graph {
     return edge;
   }
 
-  evalForward({demands, doc, work_centers}) {
+  evalForward({demands, supply, doc, work_centers}) {
     const used = new UsedSet(this);
-    const date = work_centers.constructor.RowsFragment.fetchDate(doc.date);
+    let date = new Date(doc.date);
+    if(supply) {
+      date.setDate(date.getDate() + supply);
+    }
+    date = work_centers.constructor.RowsFragment.fetchDate(date);
     for(const {obj, specimen} of queries.distinctObjSpecimen([demands])) {
       const fragment = demands.filter(v => v.obj === obj && v.specimen === specimen);
       this.getVertex('0').evalForward({demands: fragment, date, time: 0, work_centers, used});
@@ -38,14 +42,14 @@ class StagesSequence extends Graph {
         for(const [edge, startKey] of deferred) {
           const stack = used.stackMap.get(startKey);
           if(!vertexes.has(edge.endVertex)) {
-            vertexes.set(edge.endVertex, {startKey: new Set()});
+            vertexes.set(edge.endVertex, {});
           }
           const patch = vertexes.get(edge.endVertex);
-          patch.startKey.add(startKey);
           const last = stack[stack.length - 1];
           if(!patch.date || patch.date < last.date) {
             patch.date = last.date;
             patch.time = last.start;
+            patch.startKey = startKey;
           }
         }
         for(const [vertex, patch] of vertexes) {
@@ -108,7 +112,7 @@ class StagesSequence extends Graph {
     return {minDate, backwardGrouped, backwardRows};
   }
 
-  evaluate({demands, doc}) {
+  evaluate({demands, supply, doc, job_prm}) {
     const {owner} = this;
     const {work_centers} = owner._manager._owner;
     // решаем задачу для текущего вида производства, потребности других видов - отбрасываем
@@ -118,12 +122,14 @@ class StagesSequence extends Graph {
     // строго говоря, дату могли указать для этапа в середине, тогда надо решать в обе стороны
 
     // ищем ближайшие
-    const {maxDate, forwardGrouped, forwardRows} = this.evalForward({demands, doc, work_centers});
+    const {maxDate, forwardGrouped, forwardRows} = this.evalForward({demands, supply, doc, work_centers});
 
     // пытаемся подтянуть найденные ближайшие к дате финала, чтобы уменьшить остатки на переделах
     let backwardRes = {};
     try {
-      backwardRes = this.evalBackward({demands, doc, work_centers, date: maxDate});
+      if(job_prm.planning.eval_backward) {
+        backwardRes = this.evalBackward({demands, doc, work_centers, date: maxDate});
+      }
     }
     catch (e) {
       // если не уместилось в обратную сторону, можем поискать другие даты
