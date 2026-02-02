@@ -6,6 +6,8 @@
  * @module cat_delivery_directions
  */
 
+/*
+
 function cache(cat) {
   const res = {};
 
@@ -39,12 +41,13 @@ module.exports = function ({cat, adapters}) {
     //После загрузки данных в ram заполняем кеш
     Object.assign(cat.delivery_directions.cache_by_elements, cache(cat));
   });
-}
+} 
+*/
 
 exports.CatDelivery_directions = class CatDelivery_directions extends Object {
 
   delay(recipient) {
-    return 0;
+    return 0; //recipient === this ? 36000 : 0;
   }
 
   checkStage({stage}) {

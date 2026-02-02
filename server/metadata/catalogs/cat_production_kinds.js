@@ -32,12 +32,13 @@ exports.CatProduction_kinds = class CatProduction_kinds extends Object {
       return '0';
     }
     if(parent.includes(',')) {
-      const parents = parent.split(',')
+      let parents = parent.split(',')
         .map(v => this.findTop(v, stages))
         .filter(v => v !== '0');
       if(!parents.length) {
         return '0';
       }
+      parents = Array.from(new Set(parents));
       if(parents.length === 1) {
         return parents[0];
       }
@@ -66,7 +67,7 @@ exports.CatProduction_kinds = class CatProduction_kinds extends Object {
           for(const subEdge of edges) {
             const startVertex = subEdge.startVertex.key === '0' ? res.addVertex(top) : res.addVertex(`${row.toFixed()}.${subEdge.startVertex.key}`);
             const endVertex = subEdge.endVertex.key === 'end' ? res.addVertex(row.toFixed()) : res.addVertex(`${row.toFixed()}.${subEdge.endVertex.key}`);
-            const edge = res.addEdge(startVertex, endVertex, subEdge.stage.end ? null : subEdge.stage);
+            const edge = res.addEdge(startVertex, endVertex, subEdge.stage?.end ? null : subEdge.stage);
           }
         }
       }
@@ -76,10 +77,13 @@ exports.CatProduction_kinds = class CatProduction_kinds extends Object {
           const top = this.findTop(parent, stages);
           const startVertex = res.addVertex(top);
           const endVertex = stage.end ? res.getVertex('end') : res.addVertex(row.toFixed());
-          const edge = res.addEdge(startVertex, endVertex, real ? stage : null);
+          const edge = res.addEdge(startVertex, endVertex, stage);
           if(top.includes(',')) {
             for(const part of top.split(',')) {
-              res.addEdge(res.addVertex(part), startVertex, null);
+              const partVertex = res.addVertex(part);
+              if(!res.findEdge(partVertex, startVertex)) {
+                res.addEdge(partVertex, startVertex, null);
+              }
             }
           }
         }
