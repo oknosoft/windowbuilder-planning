@@ -2,6 +2,7 @@
 const performance = require('./documents/performance');
 const calc_order = require('./documents/order');
 const task = require('./documents/task');
+const task_cuts = require('../cuttings/work_centers_task');
 
 module.exports = function listener($p, log, glob) {
 
@@ -30,18 +31,27 @@ module.exports = function listener($p, log, glob) {
       for(const {doc, prod} of docs) {
         try {
           // при любом изменении документа, удаляем старые записи
-          await client.query(`DELETE FROM areg_dates where register = $1 and register_type = $2`, [doc.ref, doc.class_name]);
+          if(doc.class_name === 'doc.work_centers_task' || doc.class_name === 'doc.inventory_cuts') {
+            await acc.client.query('delete from areg_cuttings where register = $1 and register_type = $2', [doc.ref, doc.class_name]);
+          }
+          if(doc.class_name !== 'doc.inventory_cuts') {
+            await client.query(`DELETE FROM areg_dates where register = $1 and register_type = $2`, [doc.ref, doc.class_name]);
+          }
+
           if(doc.posted) {
             switch (doc.class_name) {
               case 'doc.calc_order':
                 await calc_order({doc, client, utils, job_prm, wsql});
                 break;
               case 'doc.work_centers_performance':
-                await performance({doc, client, utils, job_prm, wsql});
+                await performance({doc, client, utils});
                 break;
               case 'doc.work_centers_task':
+                await task({doc, client, utils});
+                await task_cuts({doc, client, utils, job_prm});
+                break;
               case 'doc.planning_event':
-                await task({doc, client, utils, job_prm, cat});
+                await task({doc, client, utils});
                 break;
               case 'doc.purchase_order':
                 break;
