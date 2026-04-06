@@ -32,7 +32,7 @@ module.exports = function listener($p, log, glob) {
         try {
           // при любом изменении документа, удаляем старые записи
           if(doc.class_name === 'doc.work_centers_task' || doc.class_name === 'doc.inventory_cuts') {
-            await acc.client.query('delete from areg_cuttings where register = $1 and register_type = $2', [doc.ref, doc.class_name]);
+            await client.query('delete from areg_cuttings where register = $1 and register_type = $2', [doc.ref, doc.class_name]);
           }
           if(doc.class_name !== 'doc.inventory_cuts') {
             await client.query(`DELETE FROM areg_dates where register = $1 and register_type = $2`, [doc.ref, doc.class_name]);

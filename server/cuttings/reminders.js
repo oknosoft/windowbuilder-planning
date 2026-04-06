@@ -1,6 +1,7 @@
 
 const { hrtime } = require('node:process');
 const NS_PER_SEC = 1e9;
+const sqlReminders = 'SELECT nom, len, width, sum(qty * sign) qty FROM public.areg_cuttings where nom = ANY ($1) group by nom, len, width having sum(qty * sign) > 0';
 
 module.exports = function ($p, log, acc) {
 
@@ -11,7 +12,7 @@ module.exports = function ($p, log, acc) {
       const {hrtime: start, parsed: {paths, path}} = req;
       let {nom} = JSON.parse(await getBody(req));
 
-      const pq = await acc.client.query(`SELECT nom, len, width, sum(qty * sign) qty FROM public.areg_cuttings where nom = ANY ($1) group by nom, len, width having sum(qty * sign) > 0`, [nom]);
+      const pq = await acc.client.query(sqlReminders, [nom]);
       const data = {ok: true, rows: pq.rows};
 
       const diff = hrtime(start);
@@ -24,3 +25,5 @@ module.exports = function ($p, log, acc) {
     }
   };
 }
+
+module.exports.sqlReminders = sqlReminders;
