@@ -62,4 +62,4 @@ module.exports = async function task_cuts({doc, client, utils, job_prm}) {
 VALUES ${values.join(',\n')}`);
     }
   }
-}
+};

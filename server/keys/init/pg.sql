@@ -2,14 +2,13 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 14.13
--- Dumped by pg_dump version 14.13
-
--- Started on 2024-11-29 23:16:06 MSK
+-- Dumped from database version 17.5
+-- Dumped by pg_dump version 17.5
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
+SET transaction_timeout = 0;
 SET client_encoding = 'UTF8';
 SET standard_conforming_strings = off;
 SELECT pg_catalog.set_config('search_path', '', false);
@@ -20,7 +19,6 @@ SET escape_string_warning = off;
 SET row_security = off;
 
 --
--- TOC entry 2 (class 3079 OID 3595367)
 -- Name: uuid-ossp; Type: EXTENSION; Schema: -; Owner: -
 --
 
@@ -28,8 +26,6 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA public;
 
 
 --
--- TOC entry 3442 (class 0 OID 0)
--- Dependencies: 2
 -- Name: EXTENSION "uuid-ossp"; Type: COMMENT; Schema: -; Owner: -
 --
 
@@ -37,7 +33,6 @@ COMMENT ON EXTENSION "uuid-ossp" IS 'generate universally unique identifiers (UU
 
 
 --
--- TOC entry 864 (class 1247 OID 3595379)
 -- Name: key_type; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -59,7 +54,6 @@ CREATE TYPE public.key_type AS ENUM (
 
 
 --
--- TOC entry 867 (class 1247 OID 3595401)
 -- Name: keys_type; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -72,7 +66,6 @@ CREATE TYPE public.keys_type AS (
 
 
 --
--- TOC entry 870 (class 1247 OID 3595403)
 -- Name: phases; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -84,7 +77,6 @@ CREATE TYPE public.phases AS ENUM (
 
 
 --
--- TOC entry 873 (class 1247 OID 3595411)
 -- Name: prod_row; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -95,7 +87,6 @@ CREATE TYPE public.prod_row AS (
 
 
 --
--- TOC entry 876 (class 1247 OID 3595414)
 -- Name: qinfo_type; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -117,11 +108,14 @@ CREATE TYPE public.qinfo_type AS (
 
 
 --
--- TOC entry 879 (class 1247 OID 3595416)
 -- Name: refs; Type: TYPE; Schema: public; Owner: -
 --
 
 CREATE TYPE public.refs AS ENUM (
+    'cat.characteristics',
+    'cat.planning_keys',
+    'cat.users',
+    'cat.partners',
     'doc.calc_order',
     'doc.planning_event',
     'doc.work_centers_task',
@@ -142,7 +136,6 @@ CREATE TYPE public.refs AS ENUM (
 
 
 --
--- TOC entry 255 (class 1255 OID 3595443)
 -- Name: qinfo(character varying); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -229,7 +222,6 @@ $register_change$;
 SET default_table_access_method = heap;
 
 --
--- TOC entry 231 (class 1259 OID 7732347)
 -- Name: areg_cuttings; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -251,8 +243,6 @@ CREATE TABLE public.areg_cuttings (
 
 
 --
--- TOC entry 3443 (class 0 OID 0)
--- Dependencies: 231
 -- Name: TABLE areg_cuttings; Type: COMMENT; Schema: public; Owner: -
 --
 
@@ -260,7 +250,6 @@ COMMENT ON TABLE public.areg_cuttings IS 'Деловая обрезь';
 
 
 --
--- TOC entry 225 (class 1259 OID 3595444)
 -- Name: areg_dates; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -281,6 +270,7 @@ CREATE TABLE public.areg_dates (
     calc_order uuid,
     power numeric(15,3) DEFAULT 0
 );
+
 COMMENT ON COLUMN public.areg_dates.register IS 'Регистратор';
 COMMENT ON COLUMN public.areg_dates.register_type IS 'Тип регистратора';
 COMMENT ON COLUMN public.areg_dates.row_num IS 'Номер строки';
@@ -299,7 +289,6 @@ COMMENT ON COLUMN public.areg_dates.power IS 'Мощность';
 
 
 --
--- TOC entry 226 (class 1259 OID 3595450)
 -- Name: areg_needs; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -316,6 +305,7 @@ CREATE TABLE public.areg_needs (
     planing_key uuid,
     quantity numeric(15,3) DEFAULT 0
 );
+
 COMMENT ON COLUMN public.areg_needs.register IS 'Регистратор';
 COMMENT ON COLUMN public.areg_needs.register_type IS 'Тип регистратора';
 COMMENT ON COLUMN public.areg_needs.row_num IS 'Номер строки';
@@ -328,7 +318,6 @@ COMMENT ON COLUMN public.areg_needs.quantity IS 'Количество';
 
 
 --
--- TOC entry 227 (class 1259 OID 3595455)
 -- Name: calc_orders; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -343,12 +332,11 @@ CREATE TABLE public.calc_orders (
     organization uuid,
     author uuid,
     department uuid,
-    production json
+    production jsonb
 );
 
 
 --
--- TOC entry 228 (class 1259 OID 3595460)
 -- Name: characteristics; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -361,7 +349,6 @@ CREATE TABLE public.characteristics (
 
 
 --
--- TOC entry 233 (class 1259 OID 7732738)
 -- Name: feed; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -410,13 +397,12 @@ CREATE TABLE public.keys (
 
 
 --
--- TOC entry 230 (class 1259 OID 3595471)
 -- Name: settings; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.settings (
     param character varying(100) NOT NULL,
-    value json NOT NULL
+    value jsonb NOT NULL
 );
 
 
@@ -437,7 +423,6 @@ CREATE UNIQUE INDEX address ON public.keys USING btree (obj, specimen, elm, regi
 
 
 --
--- TOC entry 3293 (class 2606 OID 7732359)
 -- Name: areg_cuttings areg_cuttings_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -446,7 +431,6 @@ ALTER TABLE ONLY public.areg_cuttings
 
 
 --
--- TOC entry 3279 (class 2606 OID 3595482)
 -- Name: areg_dates areg_dates_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -455,7 +439,6 @@ ALTER TABLE ONLY public.areg_dates
 
 
 --
--- TOC entry 3281 (class 2606 OID 3595486)
 -- Name: areg_needs areg_needs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -468,6 +451,7 @@ ALTER TABLE ONLY public.areg_needs
 --
 
 CREATE INDEX phase_date ON public.areg_dates USING btree (phase, date) WITH (deduplicate_items='true');
+
 
 --
 -- Name: phase_part; Type: INDEX; Schema: public; Owner: -
@@ -485,7 +469,6 @@ ALTER TABLE ONLY public.characteristics
 
 
 --
--- TOC entry 3295 (class 2606 OID 7732743)
 -- Name: feed feed_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -494,7 +477,6 @@ ALTER TABLE ONLY public.feed
 
 
 --
--- TOC entry 3289 (class 2606 OID 3595490)
 -- Name: keys keys_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -503,7 +485,6 @@ ALTER TABLE ONLY public.keys
 
 
 --
--- TOC entry 3283 (class 2606 OID 3595492)
 -- Name: calc_orders orders_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -512,7 +493,6 @@ ALTER TABLE ONLY public.calc_orders
 
 
 --
--- TOC entry 3291 (class 2606 OID 3595494)
 -- Name: settings settings_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -521,7 +501,6 @@ ALTER TABLE ONLY public.settings
 
 
 --
--- TOC entry 3287 (class 1259 OID 3595495)
 -- Name: barcode; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -529,23 +508,19 @@ CREATE INDEX barcode ON public.keys USING btree (barcode);
 
 
 --
--- TOC entry 3297 (class 2620 OID 7732745)
--- Name: keys register_change; Type: TRIGGER; Schema: public; Owner: -
+-- Name: barcode_key; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE TRIGGER register_change AFTER INSERT OR DELETE OR UPDATE ON public.keys FOR EACH ROW EXECUTE FUNCTION public.register_change();
 
 
 --
--- TOC entry 3296 (class 2606 OID 3595496)
 -- Name: characteristics order; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.characteristics
     ADD CONSTRAINT "order" FOREIGN KEY (calc_order) REFERENCES public.calc_orders(ref) NOT VALID;
 
-
--- Completed on 2024-11-29 23:16:06 MSK
 
 --
 -- PostgreSQL database dump complete

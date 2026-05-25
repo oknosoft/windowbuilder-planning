@@ -1,7 +1,7 @@
 
 const { hrtime } = require('node:process');
 const NS_PER_SEC = 1e9;
-const sqlReminders = 'SELECT nom, len, width, sum(qty * sign) qty FROM public.areg_cuttings where nom = ANY ($1) group by nom, len, width having sum(qty * sign) > 0';
+const sqlReminders = 'SELECT nom, len, width, sum(qty * sign) qty, sum(quantity * sign) quantity FROM public.areg_cuttings where nom = ANY ($1) group by nom, len, width having sum(qty * sign) > 0';
 
 module.exports = function ($p, log, acc) {
 
@@ -27,3 +27,4 @@ module.exports = function ($p, log, acc) {
 }
 
 module.exports.sqlReminders = sqlReminders;
+module.exports.sqlRemindersAll = sqlReminders.replace('> 0', '<> 0');
