@@ -308,7 +308,7 @@ CREATE TABLE public.calc_orders (
     organization uuid,
     author uuid,
     department uuid,
-    production json
+    production jsonb
 );
 
 
@@ -361,7 +361,7 @@ CREATE TABLE public.keys (
 
 CREATE TABLE public.settings (
     param character varying(100) NOT NULL,
-    value json NOT NULL
+    value jsonb NOT NULL
 );
 
 
