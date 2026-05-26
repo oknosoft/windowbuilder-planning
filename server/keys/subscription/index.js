@@ -8,6 +8,7 @@ const class_names = [
   'doc.work_centers_task',
   'doc.purchase_order',
   'doc.planning_event',
+  'doc.inventory_cuts',
 ];
 
 class Subscription {

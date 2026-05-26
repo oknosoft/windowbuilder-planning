@@ -3,6 +3,7 @@ const performance = require('./documents/performance');
 const calc_order = require('./documents/order');
 const task = require('./documents/task');
 const task_cuts = require('../cuttings/work_centers_task');
+const inventory_cuts = require('../cuttings/inventory_cuts');
 
 module.exports = function listener($p, log, glob) {
 
@@ -52,6 +53,9 @@ module.exports = function listener($p, log, glob) {
                 break;
               case 'doc.planning_event':
                 await task({doc, client, utils});
+                break;
+              case 'doc.inventory_cuts':
+                await inventory_cuts({doc, client, utils, job_prm});
                 break;
               case 'doc.purchase_order':
                 break;

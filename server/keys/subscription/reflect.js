@@ -13,7 +13,7 @@ module.exports = function ($p, log, acc) {
   const {
     utils: {sleep, blank, deflate},
     cat: {branches},
-    doc: {calc_order, work_centers_performance, work_centers_task, purchase_order, planning_event},
+    doc: {calc_order, work_centers_performance, work_centers_task, purchase_order, planning_event, inventory_cuts},
     enm: {elm_types, inserts_glass_types},
     job_prm,
   } = $p;
@@ -28,6 +28,8 @@ module.exports = function ($p, log, acc) {
         return purchase_order;
       case 'doc.planning_event':
         return planning_event;
+      case 'doc.inventory_cuts':
+        return inventory_cuts;
     }
   };
 
