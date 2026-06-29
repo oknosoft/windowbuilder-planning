@@ -112,10 +112,19 @@ CREATE TYPE public.qinfo_type AS (
 --
 
 CREATE TYPE public.refs AS ENUM (
+    'cat.accounts',
+    'cat.abonents',
+    'cat.branches',
     'cat.characteristics',
-    'cat.planning_keys',
-    'cat.users',
+    'cat.divisions',
+    'cat.leads',
     'cat.partners',
+    'cat.planning_keys',
+    'cat.products',
+    'cat.projects',
+    'cat.servers',
+    'cat.specifications',
+    'cat.users',
     'doc.calc_order',
     'doc.planning_event',
     'doc.work_centers_task',
@@ -131,7 +140,8 @@ CREATE TYPE public.refs AS ENUM (
     'doc.nom_prices_setup',
     'doc.inventory_cuts',
     'doc.inventory_goods',
-    'doc.scaning'
+    'doc.scaning',
+    'unknown'
 );
 
 
