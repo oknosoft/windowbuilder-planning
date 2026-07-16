@@ -24,11 +24,6 @@ SET row_security = off;
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA public;
 
-
---
--- Name: EXTENSION "uuid-ossp"; Type: COMMENT; Schema: -; Owner: -
---
-
 COMMENT ON EXTENSION "uuid-ossp" IS 'generate universally unique identifiers (UUIDs)';
 
 
@@ -112,10 +107,19 @@ CREATE TYPE public.qinfo_type AS (
 --
 
 CREATE TYPE public.refs AS ENUM (
+    'cat.accounts',
+    'cat.abonents',
+    'cat.branches',
     'cat.characteristics',
-    'cat.planning_keys',
-    'cat.users',
+    'cat.divisions',
+    'cat.leads',
     'cat.partners',
+    'cat.planning_keys',
+    'cat.products',
+    'cat.projects',
+    'cat.servers',
+    'cat.specifications',
+    'cat.users',
     'doc.calc_order',
     'doc.planning_event',
     'doc.work_centers_task',
@@ -130,7 +134,9 @@ CREATE TYPE public.refs AS ENUM (
     'doc.purchase',
     'doc.nom_prices_setup',
     'doc.inventory_cuts',
-    'doc.inventory_goods'
+    'doc.inventory_goods',
+    'doc.scaning',
+    'unknown'
 );
 
 
@@ -195,6 +201,28 @@ end
 $$;
 
 
+--
+-- Name: register_change(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.register_change() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+    BEGIN
+        --
+        -- INSERT INTO feed(ref) select ref from keys order by barcode;
+        -- для определения типа операции применяется специальная переменная TG_OP.
+        --
+        IF (TG_OP = 'DELETE') THEN
+			INSERT INTO feed(ref) VALUES(OLD.ref);
+        ELSE
+			INSERT INTO feed(ref) VALUES(NEW.ref);
+        END IF;
+        RETURN NULL; -- возвращаемое значение для триггера AFTER игнорируется
+    END;
+$$;
+
+
 SET default_table_access_method = heap;
 
 --
@@ -216,11 +244,6 @@ CREATE TABLE public.areg_cuttings (
     quantity numeric(15,3) DEFAULT 0,
     amount numeric(15,3) DEFAULT 0
 );
-
-
---
--- Name: TABLE areg_cuttings; Type: COMMENT; Schema: public; Owner: -
---
 
 COMMENT ON TABLE public.areg_cuttings IS 'Деловая обрезь';
 
@@ -247,6 +270,8 @@ CREATE TABLE public.areg_dates (
     power numeric(15,3) DEFAULT 0
 );
 
+
+COMMENT ON TABLE public.areg_dates IS 'Даты планирования (запуск и готовность)';
 COMMENT ON COLUMN public.areg_dates.register IS 'Регистратор';
 COMMENT ON COLUMN public.areg_dates.register_type IS 'Тип регистратора';
 COMMENT ON COLUMN public.areg_dates.row_num IS 'Номер строки';
@@ -282,6 +307,7 @@ CREATE TABLE public.areg_needs (
     quantity numeric(15,3) DEFAULT 0
 );
 
+COMMENT ON TABLE public.areg_needs IS 'Потребность в материалах';
 COMMENT ON COLUMN public.areg_needs.register IS 'Регистратор';
 COMMENT ON COLUMN public.areg_needs.register_type IS 'Тип регистратора';
 COMMENT ON COLUMN public.areg_needs.row_num IS 'Номер строки';
@@ -291,6 +317,35 @@ COMMENT ON COLUMN public.areg_needs.characteristic IS 'Характеристи�
 COMMENT ON COLUMN public.areg_needs.stage IS 'Этап производства';
 COMMENT ON COLUMN public.areg_needs.planing_key IS 'Ключ планирования';
 COMMENT ON COLUMN public.areg_needs.quantity IS 'Количество';
+
+
+--
+-- Name: areg_wc_performance; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.areg_wc_performance (
+    register uuid NOT NULL,
+    register_type public.refs NOT NULL,
+    row_num bigint NOT NULL,
+    period timestamp without time zone NOT NULL,
+    sign smallint DEFAULT 1 NOT NULL,
+    date date,
+    shift uuid,
+    work_center uuid,
+    params uuid,
+    power numeric(15,3) DEFAULT 0
+);
+
+COMMENT ON TABLE public.areg_wc_performance IS 'Загрузка рабочих центров (план)';
+COMMENT ON COLUMN public.areg_wc_performance.register IS 'Регистратор';
+COMMENT ON COLUMN public.areg_wc_performance.register_type IS 'Тип регистратора';
+COMMENT ON COLUMN public.areg_wc_performance.row_num IS 'Номер строки';
+COMMENT ON COLUMN public.areg_wc_performance.period IS 'Период';
+COMMENT ON COLUMN public.areg_wc_performance.sign IS 'Вид движения приход-расход';
+COMMENT ON COLUMN public.areg_wc_performance.date IS 'Дата план';
+COMMENT ON COLUMN public.areg_wc_performance.shift IS 'Смена';
+COMMENT ON COLUMN public.areg_wc_performance.work_center IS 'Рабочий центр';
+COMMENT ON COLUMN public.areg_wc_performance.power IS 'Мощность';
 
 
 --
@@ -311,6 +366,8 @@ CREATE TABLE public.calc_orders (
     production jsonb
 );
 
+COMMENT ON TABLE public.calc_orders IS 'Расчёты-заказы';
+
 
 --
 -- Name: characteristics; Type: TABLE; Schema: public; Owner: -
@@ -323,21 +380,38 @@ CREATE TABLE public.characteristics (
     name character varying(200)
 );
 
+COMMENT ON TABLE public.characteristics IS 'Характеристики продукции';
+
 
 --
 -- Name: feed; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.feed (
-    seq uuid NOT NULL,
-    abonent uuid,
-    branch uuid,
-    year integer,
-    type public.refs,
-    ref uuid,
-    rev character varying(64),
-    deleted boolean
+    seq bigint NOT NULL,
+    ref uuid NOT NULL
 );
+
+COMMENT ON TABLE public.feed IS 'Фид ключей для интеграции';
+
+
+--
+-- Name: feed_seq_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.feed_seq_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: feed_seq_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.feed_seq_seq OWNED BY public.feed.seq;
 
 
 --
@@ -354,6 +428,8 @@ CREATE TABLE public.keys (
     type public.key_type
 );
 
+COMMENT ON TABLE public.keys IS 'Ключи планирования';
+
 
 --
 -- Name: settings; Type: TABLE; Schema: public; Owner: -
@@ -363,6 +439,49 @@ CREATE TABLE public.settings (
     param character varying(100) NOT NULL,
     value jsonb NOT NULL
 );
+
+COMMENT ON TABLE public.settings IS 'Настройки и параметры';
+
+
+--
+-- Name: specifications; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.specifications (
+    register uuid NOT NULL,
+    register_type public.refs NOT NULL,
+    row_num bigint NOT NULL,
+    sign smallint DEFAULT 1 NOT NULL,
+    product uuid,
+    dop integer,
+    elm integer,
+    region integer,
+    stage uuid,
+    nom uuid,
+    characteristic uuid,
+    totqty1 numeric(15,4) DEFAULT 0
+);
+
+COMMENT ON TABLE public.specifications IS 'Корректировки спецификаций';
+COMMENT ON COLUMN public.specifications.register IS 'Регистратор';
+COMMENT ON COLUMN public.specifications.register_type IS 'Тип регистратора';
+COMMENT ON COLUMN public.specifications.row_num IS 'Номер строки';
+COMMENT ON COLUMN public.specifications.sign IS 'Вид движения приход-расход';
+COMMENT ON COLUMN public.specifications.product IS 'Изделие';
+COMMENT ON COLUMN public.specifications.dop IS 'Тип строки (материал, обрезь, потребность)';
+COMMENT ON COLUMN public.specifications.elm IS 'Элемент или слой';
+COMMENT ON COLUMN public.specifications.region IS 'Ряд элемента';
+COMMENT ON COLUMN public.specifications.stage IS 'Этап производства';
+COMMENT ON COLUMN public.specifications.nom IS 'Номенклатура';
+COMMENT ON COLUMN public.specifications.characteristic IS 'Характеристика';
+COMMENT ON COLUMN public.specifications.totqty1 IS 'Количество';
+
+
+--
+-- Name: feed seq; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.feed ALTER COLUMN seq SET DEFAULT nextval('public.feed_seq_seq'::regclass);
 
 
 --
@@ -397,6 +516,14 @@ ALTER TABLE ONLY public.areg_needs
 
 
 --
+-- Name: areg_wc_performance areg_wc_performance_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.areg_wc_performance
+    ADD CONSTRAINT areg_wc_performance_pkey PRIMARY KEY (register, register_type, row_num);
+
+
+--
 -- Name: phase_date; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -408,6 +535,14 @@ CREATE INDEX phase_date ON public.areg_dates USING btree (phase, date) WITH (ded
 --
 
 CREATE INDEX phase_part ON public.areg_dates USING btree (phase, part) WITH (deduplicate_items='true');
+
+
+--
+-- Name: specifications specifications_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.specifications
+    ADD CONSTRAINT specifications_pkey PRIMARY KEY (register, register_type, row_num);
 
 
 --
@@ -462,6 +597,13 @@ CREATE INDEX barcode ON public.keys USING btree (barcode);
 --
 
 CREATE INDEX barcode_key ON public.areg_dates USING btree (planing_key) WITH (deduplicate_items='true');
+
+
+--
+-- Name: keys register_change; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER register_change AFTER INSERT OR DELETE OR UPDATE ON public.keys FOR EACH ROW EXECUTE FUNCTION public.register_change();
 
 
 --
