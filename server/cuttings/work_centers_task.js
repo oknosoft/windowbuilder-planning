@@ -17,7 +17,7 @@ module.exports = async function task_cuts({doc, client, utils, job_prm}) {
   for(const row of cuts) {
     noms.add(row.nom);
   }
-  const pq = await client.query(sqlReminders, [Array.from(noms).map(v => v.ref)]);
+  const pq = await client.query(sqlReminders, [Array.from(noms).map(v => v.ref), register, register_type]);
   for(const rem of pq.rows) {
     rem.len = parseFloat(rem.len);
     rem.width = parseFloat(rem.width);

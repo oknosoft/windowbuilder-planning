@@ -1,18 +1,22 @@
 
 const { hrtime } = require('node:process');
 const NS_PER_SEC = 1e9;
-const sqlReminders = 'SELECT nom, len, width, sum(qty * sign) qty, sum(quantity * sign) quantity FROM public.areg_cuttings where nom = ANY ($1) group by nom, len, width having sum(qty * sign) > 0';
+const sqlReminders = `SELECT nom, len, width, sum(qty * sign) qty, sum(quantity * sign) quantity
+ FROM areg_cuttings
+ where nom = ANY ($1)
+  and not (register = $2 and register_type = $3)
+   group by nom, len, width having sum(qty * sign) > 0`;
 
 module.exports = function ($p, log, acc) {
 
-  const {end: {end500, end404}, getBody} = $p.utils;
+  const {end: {end500, end404}, getBody, blank} = $p.utils;
 
   return async (req, res) => {
     try{
       const {hrtime: start, parsed: {paths, path}} = req;
-      let {nom} = JSON.parse(await getBody(req));
+      let {nom, ref, type} = JSON.parse(await getBody(req));
 
-      const pq = await acc.client.query(sqlReminders, [nom]);
+      const pq = await acc.client.query(sqlReminders, [nom, ref || blank.guid, type || 'doc.purchase']);
       const data = {ok: true, rows: pq.rows};
 
       const diff = hrtime(start);

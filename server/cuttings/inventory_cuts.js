@@ -22,7 +22,7 @@ module.exports = async function cuts({doc, client, utils, job_prm}) {
     for(const row of materials) {
       noms.add(row.nom);
     }
-    const {rows} = await client.query(sqlRemindersAll, [Array.from(noms).map(v => v.ref)]);
+    const {rows} = await client.query(sqlRemindersAll, [Array.from(noms).map(v => v.ref), register, register_type]);
     if(rows?.length) {
       for(const rem of rows) {
         rem.len = parseFloat(rem.len);
