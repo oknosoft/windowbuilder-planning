@@ -12,6 +12,7 @@ module.exports = function planning_keys($p, log, route) {
 
     const get = require('./get')($p, log, accumulation);
     const post  = require('./post')($p, log, accumulation, get);
+
     route.keys = function keysHandler(req, res) {
       return req.method === 'GET' ? get(req, res) : post(req, res);
     };
@@ -19,6 +20,9 @@ module.exports = function planning_keys($p, log, route) {
       route.pgsql = {};
     }
     route.pgsql.keys = require('./feed')($p, log, accumulation);
+    route.pgsql.cuttings = require('../cuttings/purchase')($p, log, accumulation);
+    route.pgsql.cuts = require('../cuttings/reminders')($p, log, accumulation);
+
   }
   else {
     log('planning_keys skipping');

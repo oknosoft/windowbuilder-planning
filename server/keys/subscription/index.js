@@ -1,13 +1,14 @@
 
-const limit = 20;         // объектов за такт
+const Couchdb = require('../couchdb');
+
 const interval = 2000;    // интервал переподключения при ошибке
-const heartbeat = 20000;  // параметр http для оживления соединения
 const states = 'Отправлен,Проверяется,Подтвержден,Отклонен,Отозван,Архив'.split(',');
 const class_names = [
   'doc.work_centers_performance',
   'doc.work_centers_task',
   'doc.purchase_order',
   'doc.planning_event',
+  'doc.inventory_cuts',
 ];
 
 class Subscription {
@@ -17,6 +18,7 @@ class Subscription {
     this.$p = $p;
     this.log = log;
     this.accumulation = accumulation;
+    this.logged = {};
     // внешние подписчики, могут поместить сюда свои методы для расчёта своих индексов
     this.listeners = [];
     this._reflect = require('./reflect')($p, log, accumulation);
@@ -30,56 +32,46 @@ class Subscription {
     for(const {doc} of docs) {
       doc.unload();
     }
-    this.accumulation.set_param(prm, last_seq);
   }
 
-  async reconnect(abonent) {
-    const {$p: {cat: {branches}, job_prm: {server}, adapters: {pouch}}, accumulation, log} = this;
-    const branch = branches.get()
-    const db = server.single_db ? pouch.remote.doc : abonent.db('doc');
-    const year = new Date().getFullYear();
+  async reconnect() {
+    const {$p: {cat: {abonents}, job_prm: {server}, adapters: {pouch}}, accumulation, log} = this;
+    const feed = server.feed ? new Couchdb(server.feed, {auth: user_node}) : pouch.remote.doc;
     const conf = {
       include_docs: true,
-      heartbeat,
-      limit: limit * 2,
-      since: await accumulation.get_param(`a|${abonent.ref}`)
+      since: await accumulation.get_param(`since|feed`)
         .catch(() => (''))
         .then((since) => since),
-      selector: {
-        $or: [
-          {class_name: {$in: class_names}},
-          {
-            class_name: 'doc.calc_order',
-            obj_delivery_state: {$in: states}
-          }
-        ]
-      }
+      selector: {class_name: 'doc.calc_order'},
     };
+    if(!conf.since) {
+      conf.selector.year =  new Date().getFullYear();
+    }
 
-    return db.changes(conf)
-      .then(async ({results, last_seq}) => {
-        if(results.length) {
-          await this.reflect({db, results, last_seq, branch, abonent, year});
-          return await this.reconnect(abonent);
-        }
-        conf.live = true;
-        conf.batch_size = limit;
-        delete conf.limit;
-        log(`planning_keys reconnect zone=${abonent.id} since=${conf.since.split('-')[0]}`);
-        return db.changes(conf)
-          .on('change', async ({seq, doc}) => {
-            try {
-              await this.reflect({db, last_seq: seq, results: [{doc}], branch, abonent, year});
+    return new Promise((resolve, reject) => {
+      const changesFeed = feed.changes(conf)
+        .on('change', async ({seq, doc, origin}) => {
+          //{year, abonent, branch}
+          const abonent = abonents.by_id(origin.abonent);
+          const branch = abonent.branch(origin.branch);
+          try {
+            if(!this.logged.feed) {
+              log(`planning_keys reconnect feed zone=${abonent.id} since=${seq}`);
+              this.logged.feed = true;
             }
-            catch (e) {
-              log(e);
-            }
-          })
-          .on('error', (e) => {
+            await this.reflect({db: feed, last_seq: seq, results: [{doc}], branch, abonent, year: origin.year});
+            this.accumulation.set_param(`since|feed`, seq);
+          }
+          catch (e) {
             log(e);
-            setTimeout(this.reconnect.bind(this, abonent), interval);
-          });
-      });
+          }
+        })
+        .on('error', (e) => {
+          log(e);
+          changesFeed.cancel();
+          setTimeout(this.reconnect.bind(this), interval);
+        });
+    });
   }
 
   async subscribe() {
@@ -98,7 +90,7 @@ module.exports = function keys_subscription($p, log, accumulation) {
     .then(() => {
       const subscription = new Subscription($p, log, accumulation);
       $p.md.emit('planning_keys', {subscription, accumulation});
-      return subscription.subscribe();
+      return subscription.reconnect();
     })
     .catch(log);
 }
