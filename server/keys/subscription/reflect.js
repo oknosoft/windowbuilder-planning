@@ -239,8 +239,33 @@ module.exports = function ($p, log, acc) {
         const doc = calc_order.create(attr, false, true).load_cx();
         doc._obj._rev = _rev;
         let repeatNumber = 0;
-        function loadProduction(){
-          return doc.load_production(!job_prm.builder.cx_in_order, db)
+        function loadProduction() {
+
+          function allDocs({include_docs, keys}) {
+            if(keys?.length) {
+              return db.bulk_get({
+                docs: keys,
+                branch: parseInt(branch.suffix) || 0,
+                abonent: abonent.id,
+                year
+              })
+                .then(data => {
+                  return data;
+                });
+            }
+          };
+          const dbProxy = new Proxy(db, {
+            get(target, prop, receiver) {
+              switch (prop){
+                case 'allDocs':
+                  return allDocs;
+                default:
+                  return target[prop];
+              }
+            },
+          });
+
+          return doc.load_production(!job_prm.builder.cx_in_order, dbProxy)
             .then((prod) => {
               let repeat;
               for(const {characteristic} of doc.production) {

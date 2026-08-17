@@ -12,6 +12,9 @@ class Subscriber {
   constructor(owner, opts) {
     this.owner = owner;
     this.since = opts.since;
+    if(opts.selector) {
+      this.selector = opts.selector;
+    }
     this.handlers = {};
     this.fetch = this.fetch.bind(this);
     Promise.resolve().then(this.fetch);
@@ -37,7 +40,7 @@ class Subscriber {
     if(this.isCancelled) {
       return;
     }
-    const {since, owner: {name, headers, allReaded}, handlers} = this;
+    const {since, selector, owner: {name, headers, allReaded}, handlers} = this;
     let url = `${name}/_changes?heartbeat=40000&style=all_docs&include_docs=true&limit=40`;
     if(allReaded) {
       url += `&feed=longpoll`;
@@ -51,8 +54,14 @@ class Subscriber {
 
     try {
       this.controller = new AbortController();
-      const { signal } = this.controller;
-      const res = await fetch(url, {headers, signal}).then(res => res.json());
+      const {signal} = this.controller;
+      const opts = {headers, signal};
+      if(selector) {
+        opts.method = 'POST';
+        opts.body = JSON.stringify({selector});
+        url += '&filter=selector';
+      }
+      const res = await fetch(url, opts).then(res => res.json());
       const {last_seq, results, pending} = res;
       const {change} = handlers;
       if(Array.isArray(results)) {
@@ -187,9 +196,9 @@ class Couchdb {
    * @summary Аналог bulk_get() PouchDB
    * @return {Promise<*>}
    */
-  bulk_get(docs) {
+  bulk_get({docs, branch, abonent, year}) {
     const {name, headers} = this;
-    return fetch(`${name}/_bulk_get`, {method: 'POST', headers, body: JSON.stringify({docs})})
+    return fetch(`${name}/_bulk_get`, {method: 'POST', headers, body: JSON.stringify({docs, branch, abonent, year})})
       .then(res => res.json());
   }
 }

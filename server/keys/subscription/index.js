@@ -35,17 +35,22 @@ class Subscription {
   }
 
   async reconnect() {
-    const {$p: {cat: {abonents}, job_prm: {server}, adapters: {pouch}}, accumulation, log} = this;
+    const {$p: {cat: {abonents}, job_prm: {server, user_node}, adapters: {pouch}}, accumulation, log} = this;
     const feed = server.feed ? new Couchdb(server.feed, {auth: user_node}) : pouch.remote.doc;
     const conf = {
       include_docs: true,
       since: await accumulation.get_param(`since|feed`)
         .catch(() => (''))
         .then((since) => since),
-      selector: {class_name: 'doc.calc_order'},
+      selector: {type: 'doc.calc_order'},
     };
     if(!conf.since) {
-      conf.selector.year =  new Date().getFullYear();
+      // "2026": {
+      //   "8": "019f7e89-c86b-7cdf-b217-db0e638e08c1",
+      //     "21": "019f7e97-85ba-7521-bdea-09da3e23f79c",
+      //     "22": "019f80d3-413f-764f-97ba-5cf3880d82c6"
+      // }
+      conf.since =  '019f7e89-c86b-7cdf-b217-db0e638e08c1';
     }
 
     return new Promise((resolve, reject) => {
@@ -60,7 +65,7 @@ class Subscription {
               this.logged.feed = true;
             }
             await this.reflect({db: feed, last_seq: seq, results: [{doc}], branch, abonent, year: origin.year});
-            this.accumulation.set_param(`since|feed`, seq);
+            await this.accumulation.set_param(`since|feed`, seq);
           }
           catch (e) {
             log(e);
@@ -74,13 +79,6 @@ class Subscription {
     });
   }
 
-  async subscribe() {
-    const {cat: {abonents}, job_prm: {server, zone}} = this.$p;
-    for(const id of server.single_db ? [zone] : server.abonents) {
-      await this.reconnect(abonents.by_id(id));
-    }
-    return Promise.resolve(this);
-  }
 }
 
 // слушает базы всех отделов всех абонентов и создаёт по событиям, ключи
