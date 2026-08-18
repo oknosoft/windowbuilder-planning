@@ -2,7 +2,7 @@
 const Couchdb = require('../couchdb');
 
 const interval = 2000;    // интервал переподключения при ошибке
-const states = 'Отправлен,Проверяется,Подтвержден,Отклонен,Отозван,Архив'.split(',');
+
 const class_names = [
   'doc.work_centers_performance',
   'doc.work_centers_task',
@@ -25,7 +25,7 @@ class Subscription {
   }
 
   async reflect(attr) {
-    let {prm, last_seq, docs} = await this._reflect(attr);
+    const docs = await this._reflect(attr);
     for(const listener of this.listeners) {
       await listener.call(this, {...attr, docs});
     }
@@ -53,30 +53,30 @@ class Subscription {
       conf.since =  '019f7e89-c86b-7cdf-b217-db0e638e08c1';
     }
 
-    return new Promise((resolve, reject) => {
-      const changesFeed = feed.changes(conf)
-        .on('change', async ({seq, doc, origin}) => {
-          //{year, abonent, branch}
-          const abonent = abonents.by_id(origin.abonent);
-          const branch = abonent.branch(origin.branch);
-          try {
-            if(!this.logged.feed) {
-              log(`planning_keys reconnect feed zone=${abonent.id} since=${seq}`);
-              this.logged.feed = true;
-            }
-            await this.reflect({db: feed, last_seq: seq, results: [{doc}], branch, abonent, year: origin.year});
-            await this.accumulation.set_param(`since|feed`, seq);
+    const onError = (e) => {
+      log(e);
+      changesFeed.cancel();
+      setTimeout(this.reconnect.bind(this), interval);
+    };
+
+    const changesFeed = feed.changes(conf)
+      .on('change', async ({seq, doc, origin}) => {
+        //{year, abonent, branch}
+        const abonent = abonents.by_id(origin.abonent);
+        const branch = abonent.branch(origin.branch);
+        try {
+          if(!this.logged.feed) {
+            log(`planning_keys reconnect feed zone=${abonent.id} since=${seq}`);
+            this.logged.feed = true;
           }
-          catch (e) {
-            log(e);
-          }
-        })
-        .on('error', (e) => {
-          log(e);
-          changesFeed.cancel();
-          setTimeout(this.reconnect.bind(this), interval);
-        });
-    });
+          await this.reflect({db: feed, results: [{doc}], branch, abonent, year: origin.year});
+          await this.accumulation.set_param(`since|feed`, seq);
+        }
+        catch (e) {
+          onError(e);
+        }
+      })
+      .on('error', onError);
   }
 
 }

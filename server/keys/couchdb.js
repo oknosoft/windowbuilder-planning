@@ -66,6 +66,9 @@ class Subscriber {
       const {change} = handlers;
       if(Array.isArray(results)) {
         for(const item of results) {
+          if(this.isCancelled) {
+            break;
+          }
           await change(item);
           this.since = item.seq;
         }

@@ -1,8 +1,4 @@
 
-// дата среза - полгода
-const slice = new Date();
-slice.setMonth(slice.getMonth() - 7);
-
 function findKey(rows, specimen, elm=0, region=0) {
   return rows.find((v) => v.specimen == specimen && v.elm == elm && v.region == v.region);
 }
@@ -17,29 +13,22 @@ module.exports = function ($p, log, acc) {
     enm: {elm_types, inserts_glass_types},
     job_prm,
   } = $p;
+  const mngrs = {
+    'doc.work_centers_performance': work_centers_performance,
+    'doc.work_centers_task': work_centers_task,
+    'doc.purchase_order': purchase_order,
+    'doc.planning_event': planning_event,
+    'doc.inventory_cuts': inventory_cuts,
+  }
   const glrt = require('./glrt')($p);
-  const mgrByName = (name) => {
-    switch (name) {
-      case 'doc.work_centers_performance':
-        return work_centers_performance;
-      case 'doc.work_centers_task':
-        return work_centers_task;
-      case 'doc.purchase_order':
-        return purchase_order;
-      case 'doc.planning_event':
-        return planning_event;
-      case 'doc.inventory_cuts':
-        return inventory_cuts;
-    }
-  };
-
 
   async function datePrefix(date) {
     const year = date.getFullYear();
-    const prefix = Number(`1${((year - 2000) * 12 + date.getMonth()).pad(3)}`);
+    const gt = (year - 2020) * 12 + date.getMonth();
+    const lt = gt + 3;
     const pq = await acc.client.query(`SELECT barcode from keys WHERE barcode<$1 and barcode>=$2
-            order by barcode desc limit 1`, [Number(`${prefix + 1}00000000`), Number(`${prefix}00000000`)]);
-    return pq.rowCount ? Number(pq.rows[0].barcode) + 1 : Number(`${prefix}00000000`);
+            order by barcode desc limit 1`, [Number(`${lt.pad(3)}000000000`), Number(`${gt.pad(3)}000000000`)]);
+    return pq.rowCount ? Number(pq.rows[0].barcode) + 1 : Number(`${gt.pad(3)}000000000`);
   }
 
   async function order({doc, branch, abonent, year, prod}) {
@@ -212,14 +201,17 @@ module.exports = function ($p, log, acc) {
     }
     else {
       const {rowCount} = await acc.client.query(`SELECT ref from keys WHERE
-        obj=$1 and specimen=0 and elm=0 and region=0`, [doc.valueOf()]);
+        obj=$1 and specimen=0 and elm=0 and region=0 and type='order'`, [doc.valueOf()]);
       if(!rowCount) {
-        return acc.client.query(keysSQL, [doc.valueOf(), 0, 0, 0, await nextBarcode(), 'order']);
+        await acc.client.query(keysSQL, [doc.valueOf(), 0, 0, 0, await nextBarcode(), 'order']);
+      }
+      for(const row of doc.struct) {
+        await acc.client.query(keysSQL, [doc.valueOf(), 1, row.elm, 0, await nextBarcode(), 'order_half_stuff']);
       }
     }
   }
 
-  async function reflect({db, results, last_seq, branch, abonent, year}) {
+  async function reflect({db, results, branch, abonent, year}) {
     await sleep(2);
     const docs = [];
     for(const result of results) {
@@ -240,25 +232,18 @@ module.exports = function ($p, log, acc) {
         doc._obj._rev = _rev;
         let repeatNumber = 0;
         function loadProduction() {
-
-          function allDocs({include_docs, keys}) {
-            if(keys?.length) {
-              return db.bulk_get({
-                docs: keys,
-                branch: parseInt(branch.suffix) || 0,
-                abonent: abonent.id,
-                year
-              })
-                .then(data => {
-                  return data;
-                });
-            }
-          };
           const dbProxy = new Proxy(db, {
             get(target, prop, receiver) {
               switch (prop){
                 case 'allDocs':
-                  return allDocs;
+                  return function allDocs({include_docs, keys}) {
+                    return keys?.length ? db.bulk_get({
+                      docs: keys,
+                      branch: parseInt(branch?.suffix) || 0,
+                      abonent: abonent.id,
+                      year
+                    }) : Promise.resolve([]);
+                  };
                 default:
                   return target[prop];
               }
@@ -291,13 +276,16 @@ module.exports = function ($p, log, acc) {
         }
         const prod = await loadProduction();
         docs.push({doc, prod});
-        // запись в таблице calc_orders
-        await order({doc, branch, abonent, year, prod});
-        // запись в таблице keys документа Расчёт
-        await keys({doc, branch, abonent, year});
 
-        // ключи продукций и фрагментов продукций, генерируем только для заказов за последние полгода
-        if(doc.date > slice) {
+        // запись в таблице calc_orders (возможно, не нужна...)
+        await order({doc, branch, abonent, year, prod});
+
+        // запись в таблице keys документа Расчёт
+        if(glrt.states.includes(doc.obj_delivery_state)) {
+
+          await keys({doc, branch, abonent, year});
+
+          // ключи продукций и фрагментов продукций
           for(const row of doc.production) {
             if(prod.includes(row.characteristic) && row.characteristic.calc_order === doc) {
               // запись в таблице characteristics
@@ -318,14 +306,14 @@ module.exports = function ($p, log, acc) {
         }
       }
       else {
-        const mgr = mgrByName(class_name);
+        const mgr = mngrs[class_name];
         const doc = mgr.create(attr, false, true);
         doc._obj._rev = _rev;
         docs.push({doc, prod: []});
       }
     }
-    const prm = branch.empty() ? `a|${abonent.ref}` : `b|${branch.ref}`;
-    return {prm, last_seq, docs};
+
+    return docs;
   }
 
   return reflect;
