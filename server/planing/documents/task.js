@@ -2,7 +2,7 @@
 // Проведение задания на производство и события планирования
 // просто, закидываем в регистр табчасть набора
 
-module.exports = function({doc, client, utils}) {
+module.exports = function({doc, client, utils, orders}) {
   const values = [];
   const register = doc.ref;
   const register_type = doc.class_name;
@@ -24,6 +24,9 @@ module.exports = function({doc, client, utils}) {
             calc_order: calc_order.ref,
             power,
           });
+        }
+        if(orders && !orders.has(calc_order)) {
+          orders.add(calc_order);
         }
       }
       const svalues = values.map((v, index) => `('${register}', '${register_type}', ${index + 1}, '${period}', ${

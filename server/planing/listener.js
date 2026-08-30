@@ -2,12 +2,13 @@
 const performance = require('./documents/performance');
 const calc_order = require('./documents/order');
 const task = require('./documents/task');
+const reflect_order = require('./documents/reflect_order');
 const task_cuts = require('../cuttings/work_centers_task');
 const inventory_cuts = require('../cuttings/inventory_cuts');
 
 module.exports = function listener($p, log, glob) {
 
-  const {utils, job_prm, wsql, cat} = $p;
+  const {utils, job_prm, wsql, cat, md} = $p;
   const register = 'areg_dates';
 
   function notifyEvents({ref, class_name, number_doc, date, posted, _rev}, error) {
@@ -25,17 +26,22 @@ module.exports = function listener($p, log, glob) {
       .catch((err) => null);
   }
 
-  $p.md.once('planning_keys', ({subscription, accumulation}) => {
+  md.once('planning_keys', ({subscription, accumulation}) => {
     const {client} = accumulation;
     glob.client = client;
     subscription.listeners.push(async function reflectPlaning({db, results, docs, branch, abonent, year}) {
+      const orders = new Set();
       for(const {doc, prod} of docs) {
         try {
           // при любом изменении документа, удаляем старые записи
-          if(doc.class_name === 'doc.work_centers_task' || doc.class_name === 'doc.inventory_cuts') {
+          if(doc.class_name === 'doc.work_centers_task') {
+            for(const {calc_order} of doc.set) {
+              orders.add(calc_order);
+            }
             await client.query('delete from areg_cuttings where register = $1 and register_type = $2', [doc.ref, doc.class_name]);
           }
           if(doc.class_name !== 'doc.inventory_cuts') {
+            await client.query('delete from areg_cuttings where register = $1 and register_type = $2', [doc.ref, doc.class_name]);
             await client.query(`DELETE FROM areg_dates where register = $1 and register_type = $2`, [doc.ref, doc.class_name]);
           }
 
@@ -48,7 +54,7 @@ module.exports = function listener($p, log, glob) {
                 await performance({doc, client, utils});
                 break;
               case 'doc.work_centers_task':
-                await task({doc, client, utils});
+                await task({doc, client, utils, orders});
                 await task_cuts({doc, client, utils, job_prm});
                 break;
               case 'doc.planning_event':
@@ -71,6 +77,12 @@ module.exports = function listener($p, log, glob) {
           throw error;
         }
       }
+      // рассчитаем включенность изделий заказов в задания
+      await reflect_order({
+        client,
+        accumulation: $p.accumulation,
+        orders: Array.from(orders),
+      });
     });
   });
 }
