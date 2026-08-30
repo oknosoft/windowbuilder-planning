@@ -8,10 +8,10 @@ where calc_order =ANY($1) and phase = 'run'
 group by calc_order`;
 
 module.exports = async function({client, accumulation, orders}) {
-  if(orders.length) {
-    const req = await client.query(sql, [orders.map(v => v.ref)]);
+  if(orders.length && accumulation.client) {
+    const req = await client.query(sql, [orders]);
     for(const order of orders) {
-      const row = req.rows.find(v => v.calc_order == order);
+      const row = req.rows.find(v => v.calc_order === order);
       let debit = 0, credit = 0, indicator = 0;
       if(row) {
         debit = parseFloat(row.debit);
@@ -30,7 +30,7 @@ module.exports = async function({client, accumulation, orders}) {
         indicator = 200;
       }
 
-      await accumulation.client.query(`update doc_calc_order set tasked = $2, where ref = $1`, [order, indicator]);
+      await accumulation.client.query(`update doc_calc_order set tasked = $2 where ref = $1`, [order, indicator]);
     }
   }
 }

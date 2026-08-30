@@ -81,7 +81,7 @@ module.exports = function listener($p, log, glob) {
       await reflect_order({
         client,
         accumulation: $p.accumulation,
-        orders: Array.from(orders),
+        orders: Array.from(orders).map(v => v.ref),
       });
     });
   });
